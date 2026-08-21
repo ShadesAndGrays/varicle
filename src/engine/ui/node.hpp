@@ -14,13 +14,14 @@ namespace varicle::ui {
 class UINode : public std::enable_shared_from_this<UINode> {
   public:
     std::string name;
-    bool        visible = true;
-    bool        active  = true;
+    bool        visible      = true;
+    bool        self_visible = true;
+    bool        active       = true;
 
     // Layout
-    UIAnchor   anchor      = anchors::TopLeft;
-    Aligment   alignment   = Aligment::START;
-    ContainerSizing container_sizing = {SizingMode::EXACT,SizingMode::EXACT};
+    UIAnchor        anchor           = anchors::TopLeft;
+    Aligment        alignment        = Aligment::START;
+    ContainerSizing container_sizing = { SizingMode::EXACT, SizingMode::EXACT };
 
     Vec2 pivot = { 0.0f, 0.0f };
 
@@ -198,7 +199,8 @@ class UINode : public std::enable_shared_from_this<UINode> {
         if (!visible)
             return;
 
-        draw_self();
+        if (self_visible)
+            draw_self();
 
         for (auto& child : m_children) {
             child->draw();

@@ -30,7 +30,8 @@ void SimpleUITestScene::init() {
     parent->container_sizing = {ui::SizingMode::FILL, ui::SizingMode::EXACT};
     parent->bias        = 1.0f;
 
-    auto button = std::make_shared<ui::UIButton>("Play");
+    // auto button = std::make_shared<ui::element::UIButton>("Play");
+    auto button = ui::element::UIButton::create("play");
     button->on_click = []() {
         auto &sm = ServiceLocator::get<SceneManager>();
         sm.switch_to_scene("layout-ui");

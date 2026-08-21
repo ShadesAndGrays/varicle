@@ -2,7 +2,7 @@
 // #include "engine/ui/ui.hpp"
 #include "strucutres.hpp"
 #include "panel.hpp"
-#include "button.hpp"
+#include "elements/button.hpp"
 #include "node.hpp"
 
 #include <fstream>
@@ -55,7 +55,7 @@ class UIFactory {
 
         register_type("UIButton", [this](const json& j) {
             std::string text = j.value("text", "Button");
-            auto        btn  = std::make_shared<UIButton>(text);
+            auto        btn  = std::make_shared<element::UIButton>(text);
             if (j.contains("event_id")) {
                 std::string event_id = j["event_id"];
                 btn->on_click        = m_event_registry[event_id];
