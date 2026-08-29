@@ -1,8 +1,11 @@
 #pragma once
 
 #include <GLFW/glfw3.h>
-#include <vulkan/vulkan.hpp>
 #include <glm/glm.hpp>
+#include <vulkan/vulkan.hpp>
+#include "vulkan-lean.hpp"
+
+namespace varicle::render::vulkan {
 
 struct VulkanContext {
 
@@ -12,34 +15,36 @@ struct VulkanContext {
     bool        m_framebufferResized = false;
 
     // Vulkan member variables
-    // These are automatically cleaned up when the object is destroyed
-    // VkContext                m_context;
-    vk::raii::Instance               m_instance       = nullptr;
-    vk::raii::DebugUtilsMessengerEXT m_debugMessanger = nullptr;
-    vk::raii::SurfaceKHR             m_surface        = nullptr;
-    vk::raii::PhysicalDevice         m_physicalDevice = nullptr;
-    vk::raii::Device                 m_device         = nullptr;
+    vk::Instance               m_instance       = nullptr;
+    vk::DebugUtilsMessengerEXT m_debugMessanger = nullptr;
+    vk::SurfaceKHR             m_surface        = nullptr;
+    vk::PhysicalDevice         m_physicalDevice = nullptr;
+    vk::Device                 m_device         = nullptr;
 
-    vk::raii::SwapchainKHR           m_swapChain = nullptr;
-    std::vector<vk::Image>           m_swapChainImages;
-    vk::SurfaceFormatKHR             m_swapChainSurfaceFormat;
-    vk::Extent2D                     m_swapChainExtent;
-    std::vector<vk::raii::ImageView> m_swapChainImageViews;
+    vk::SwapchainKHR           m_swapChain = nullptr;
+    std::vector<vk::Image>     m_swapChainImages;
+    vk::SurfaceFormatKHR       m_swapChainSurfaceFormat;
+    vk::Extent2D               m_swapChainExtent;
+    std::vector<vk::ImageView> m_swapChainImageViews;
 
-    vk::raii::PipelineLayout m_pipelineLayout   = nullptr;
-    vk::raii::Pipeline       m_graphicsPipeline = nullptr;
+    vk::PipelineLayout m_pipelineLayout   = nullptr;
+    vk::Pipeline       m_graphicsPipeline = nullptr;
 
-    vk::raii::CommandPool                m_commandPool = nullptr;
-    std::vector<vk::raii::CommandBuffer> m_commandBuffers;
+    vk::CommandPool                m_commandPool = nullptr;
+    std::vector<vk::CommandBuffer> m_commandBuffers;
 
-    std::vector<vk::raii::Semaphore> m_presentCompleteSemaphores;
-    std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
-    std::vector<vk::raii::Fence>     m_inFlightFences;
+    std::vector<vk::Semaphore> m_presentCompleteSemaphores;
+    std::vector<vk::Semaphore> m_renderFinishedSemaphores;
+    std::vector<vk::Fence>     m_inFlightFences;
 
-    vk::raii::Buffer       m_vertexBuffer = nullptr; // interface for memory
-    vk::raii::DeviceMemory m_vertexBufferMemory = nullptr; // actually memory
+    vk::Buffer       m_vertexBuffer       = nullptr; // interface for memory
+    vk::DeviceMemory m_vertexBufferMemory = nullptr; // actually memory
 
     // These are automatically cleaned up when the device is destroyed
-    vk::raii::Queue m_queue = nullptr; // for graphics and presenting
+    vk::Queue m_queue = nullptr; // for graphics and presenting
+                                 //
+                    
+    vk::detail::DynamicLoader m_dl;
 };
 
+} // namespace varicle::render
