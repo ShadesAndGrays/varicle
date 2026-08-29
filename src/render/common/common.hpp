@@ -21,6 +21,7 @@ class IRender {
 
     virtual void begin_frame() = 0;
     virtual void end_frame()   = 0;
+    virtual bool should_close_window() = 0;
 
     virtual void draw_circle(float x, float y, float radius, Color color) = 0;
     virtual void

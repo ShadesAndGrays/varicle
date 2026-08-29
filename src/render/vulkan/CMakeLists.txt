@@ -47,6 +47,7 @@ target_sources(${TEMPLATE_NAME}
     PRIVATE
     src/test.cpp
     src/core/init.cpp
+    src/core/debug.cpp
     # src/vulkan-lean.cpp
 )
 

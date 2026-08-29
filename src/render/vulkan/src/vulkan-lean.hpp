@@ -1,24 +1,19 @@
+#pragma once
 #include "common.hpp"
 #include <vulkan/vulkan.hpp>
 
-namespace varicle::render {
+namespace varicle::render::vulkan {
 
-#ifdef NDEBUG
-constexpr bool enable_validation_layers = false;
-#else
-constexpr bool enableValidationLayers = true;
-#endif
 
 class VulkanRenderer : public IRender {
 
   public:
+    bool should_close_window() override;
+
     void
     init(void* native_window_handle, uint32_t width, uint32_t height) override;
 
-    void shutdown() override {
-        // TODO: Implement this pure virtual method.
-        // static_assert(false, "Method `shutdown` is not implemented.");
-    }
+    void shutdown() override; 
 
     void begin_frame() override {
         // TODO: Implement this pure virtual method.
@@ -45,7 +40,10 @@ class VulkanRenderer : public IRender {
         // TODO: Implement this pure virtual method.
         // static_assert(false, "Method `draw_rect` is not implemented.");
     }
+
+  private:
+    struct Impl;
+    Impl* impl = nullptr;
 };
 
 } // namespace varicle::render
-

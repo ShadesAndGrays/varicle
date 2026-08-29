@@ -1,50 +1,137 @@
-#include "init.hpp"
+#include "core/context.hpp"
 #include "vulkan-lean.hpp"
+#if !defined(VULKAN_HPP_DISPATCH_LOADER_DYNAMIC)
+#define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
+#endif
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-
 #include <algorithm>
 #include <print>
 
 // for resolving function pointers at runtime
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
-namespace varicle::render {
+#ifdef NDEBUG
+constexpr bool enable_validation_layers = false;
+#else
+constexpr bool enable_validation_layers = true;
+#endif
 
-const std::vector<char const*> validation_layers = {
-    "VK_LAYER_KHRONOS_validation"
+namespace varicle::render::vulkan {
+
+struct VulkanRenderer::Impl {
+    VulkanContext v_context;
 };
 
-std::vector<const char*>
-get_required_layers(std::vector<const char*> validation_layers);
+GLFWwindow* init_window(
+    VulkanContext* context,
+    uint32_t       width  = 800,
+    uint32_t       height = 600,
+    const char*    name   = "Varicle"
+);
+
+vk::ApplicationInfo create_app();
+
+vk::InstanceCreateInfo create_instance_info(
+    const std::vector<char const*> &validation_layers,
+    vk::ApplicationInfo*           p_app_info,
+    std::vector<const char*>       &required_layers,
+    std::vector<const char*>       &required_extensions
+);
+
+vk::Instance create_instance();
+
+std::vector<char const*> get_required_extensions();
+
+std::vector<char const*>
+get_required_layers(std::vector<const char*> &validation_layers);
+
+namespace debug {
+void setupDebugMessenger(VulkanContext& context);
+}
+
+} // namespace varicle::render::vulkan
+
+// IMPLEMENTATION
+
+namespace varicle::render::vulkan {
+
+std::vector<char const*> validation_layers = {
+    "VK_LAYER_KHRONOS_validation"
+};
 
 void VulkanRenderer ::init(
     void*    native_window_handle,
     uint32_t width,
     uint32_t height
 ) {
+    impl = new Impl{};
+
     std::println("VulkanRender: Initializing Vulkan");
-    vk::Instance vulkan_instance = create_instance();
+
+    vk::detail::defaultDispatchLoaderDynamic.init(impl->v_context.m_dl);
+    impl->v_context.m_window = init_window(&impl->v_context);
+
+    impl->v_context.m_instance = create_instance();
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(impl->v_context.m_instance);
+
+    if (enable_validation_layers)
+        debug::setupDebugMessenger(impl->v_context);
+}
+
+GLFWwindow* init_window(
+    VulkanContext* context,
+    uint32_t       width,
+    uint32_t       height,
+    const char*    name
+) {
+    glfwInit();
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+    auto window = glfwCreateWindow(width, height, name, nullptr, nullptr);
+
+    glfwSetWindowUserPointer(window, context);
+    glfwSetFramebufferSizeCallback(
+        window, [](GLFWwindow* window, int width, int height) {
+            auto ctx =
+                static_cast<VulkanContext*>(glfwGetWindowUserPointer(window));
+            if (ctx) {
+                ctx->m_framebufferResized = true;
+            }
+        }
+    );
+
+    return window;
 }
 
 vk::Instance create_instance() {
-    // initialize the dynamic loader function pointers
-    VULKAN_HPP_DEFAULT_DISPATCHER.init();
-    
-    // create the application info
-    vk::ApplicationInfo app_info = create_app();
 
-    // get required layers and extensions from the 
-    auto required_layers         = get_required_layers(validation_layers);
-    auto required_extensions     = get_required_extensions();
+    try {
 
-    vk::InstanceCreateInfo instance_create_info = create_instance_info(
-        validation_layers, &app_info, required_layers, required_extensions
+        // create the application info
+        vk::ApplicationInfo app_info = create_app();
 
-    );
+        // get required layers and extensions from the
+        auto required_layers     = get_required_layers(validation_layers);
+        auto required_extensions = get_required_extensions();
 
-    vk::Instance instance = vk::createInstance(instance_create_info);
+        vk::InstanceCreateInfo instance_create_info = create_instance_info(
+            validation_layers, &app_info, required_layers, required_extensions
 
-    return instance;
+        );
+
+        vk::Instance instance =
+            vk::createInstance(instance_create_info, nullptr);
+        vk::detail::defaultDispatchLoaderDynamic.init(instance);
+        return instance;
+    } catch (vk::SystemError const& err) {
+        std::println("vk::SystemError: {}", err.what());
+        std::exit(-1);
+    } catch (...) {
+        std::println("Unknown error");
+        std::exit(-1);
+    }
+    // return instance;
 }
 
 vk::ApplicationInfo create_app() {
@@ -76,7 +163,7 @@ std::vector<const char*> getRequiredInstanceExtenstions() {
 }
 
 std::vector<const char*>
-get_required_layers(std::vector<const char*> validation_layers) {
+get_required_layers(std::vector<char const*> &validation_layers) {
 
     std::vector<char const*> required_layers;
     if (enable_validation_layers) {
@@ -85,7 +172,7 @@ get_required_layers(std::vector<const char*> validation_layers) {
         );
     }
 
-    auto layer_properties     = vk::enumerateInstanceLayerProperties();
+    auto layer_properties = vk::enumerateInstanceLayerProperties();
 
     auto unsupported_layer_it = std::ranges::find_if(
         required_layers, [&layer_properties](auto const& required_layer) {
@@ -106,7 +193,7 @@ get_required_layers(std::vector<const char*> validation_layers) {
     return required_layers;
 }
 
-std::vector<const char*> get_required_extensions() {
+std::vector<char const*> get_required_extensions() {
 
     auto required_extensions = getRequiredInstanceExtenstions();
 
@@ -140,10 +227,10 @@ std::vector<const char*> get_required_extensions() {
 }
 
 vk::InstanceCreateInfo create_instance_info(
-    const std::vector<char const*> validation_layers,
+    const std::vector<char const*> &validation_layers,
     vk::ApplicationInfo*           p_app_info,
-    std::vector<const char*>       required_layers,
-    std::vector<const char*>       required_extensions
+    std::vector<const char*>       &required_layers,
+    std::vector<const char*>       &required_extensions
 ) {
 
     vk::InstanceCreateInfo create_info{
@@ -158,4 +245,19 @@ vk::InstanceCreateInfo create_instance_info(
     return create_info;
 }
 
-} // namespace varicle::render
+bool VulkanRenderer::should_close_window() {
+    return glfwWindowShouldClose(impl->v_context.m_window);
+}
+
+void VulkanRenderer::shutdown() {
+    std::println("Shutting down....");
+
+    glfwDestroyWindow(impl->v_context.m_window);
+    glfwTerminate();
+
+    // call last
+    if (impl != nullptr)
+        delete impl;
+}
+
+} // namespace varicle::render::vulkan
