@@ -12,9 +12,8 @@ class UIText : public UINode {
     int            m_font_size;
 
   public:
-    UIText() :  m_text("") {
-    }
-    UIText(std::string text ) : UINode(), m_text(std::move(text)) {
+    UIText() : m_text("") {}
+    UIText(std::string text) : UINode(), m_text(std::move(text)) {
         container_sizing = { EXACT, EXACT };
     }
 
@@ -30,7 +29,14 @@ class UIText : public UINode {
         // DrawTextCodepoint(Font font, int codepoint, Vector2 position, float
         // fontSize, Color tint) DrawTextEx(Font font, const char *text, Vector2
         // position, float fontSize, float spacing, Color tint)
-        
+
+        DrawRectangleRec(
+            Rectangle{ m_global_rect.x,
+                       m_global_rect.y,
+                       m_global_rect.width,
+                       m_global_rect.height },
+            ::PURPLE
+        );
         DrawText(
             m_text.c_str(),
             static_cast<int>(m_global_rect.x),
