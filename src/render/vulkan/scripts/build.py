@@ -19,7 +19,8 @@ def run_cmd(cmd,cwd=ROOT_DIR):
         sys.exit(result.returncode)
 
 def action_clean(args):
-    pass
+    """remove build articats"""
+    run_cmd(["rm","-rf", str(BUILD_DIR)])
 
 def action_build(args):
     """Configure Built the project"""
@@ -46,6 +47,9 @@ def main():
     _ = build_parser.add_argument("--debug",action="store_true", help="Build in Debug mode")
     _ = build_parser.add_argument("--noconfig",action="store_true", help="Build without Configuring")
     build_parser.set_defaults(func=action_build)
+
+    clean_parser = subparsers.add_parser("clean", help="Clear bulid artifacts")
+    clean_parser.set_defaults(func=action_clean)
 
     run_parser = subparsers.add_parser("run", help="Run the build")
     _ = run_parser.add_argument("--debug",action="store_true", help="Build in Debug mode")

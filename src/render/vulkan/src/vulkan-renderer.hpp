@@ -4,26 +4,21 @@
 
 namespace varicle::render::vulkan {
 
-
 class VulkanRenderer : public IRender {
 
   public:
     bool should_close_window() override;
 
     void
-    init(void* native_window_handle, uint32_t width, uint32_t height) override;
 
-    void shutdown() override; 
+    init(uint32_t width, uint32_t height, const char* window_name) override;
 
-    void begin_frame() override {
-        // TODO: Implement this pure virtual method.
-        // static_assert(false, "Method `begin_frame` is not implemented.");
-    }
+    void shutdown() override;
 
-    void end_frame() override {
-        // TODO: Implement this pure virtual method.
-        // static_assert(false, "Method `end_frame` is not implemented.");
-    }
+    void begin_frame() override;
+    void clear_color(Color background) override;
+
+    void end_frame() override;
 
     void draw_circle(float x, float y, float radius, Color color) override {
         // TODO: Implement this pure virtual method.
@@ -46,4 +41,4 @@ class VulkanRenderer : public IRender {
     Impl* impl = nullptr;
 };
 
-} // namespace varicle::render
+} // namespace varicle::render::vulkan
