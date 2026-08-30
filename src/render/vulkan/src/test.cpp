@@ -10,6 +10,8 @@ void run() {
 
     while (!render->should_close_window()) {
         render->begin_frame();
+        render->clear_color(Color{1,1,0.7,1});
+
         render->end_frame();
     }
     render->shutdown();
