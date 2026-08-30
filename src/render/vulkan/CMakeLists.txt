@@ -25,12 +25,12 @@ find_package(tinyobjloader REQUIRED)
 find_package(tinygltf REQUIRED)
 find_package(KTX REQUIRED)
 
-  add_library(VulkanLean INTERFACE)
-  add_library(Vulkan::Lean ALIAS VulkanLean)
-  target_link_libraries(VulkanLean INTERFACE Vulkan::Vulkan)
-  target_compile_definitions(VulkanLean
-    INTERFACE 
-    VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1 
+add_library(VaricleVulkan INTERFACE)
+add_library(Varicle::Vulkan ALIAS VaricleVulkan)
+target_link_libraries(VaricleVulkan INTERFACE Vulkan::Vulkan)
+target_compile_definitions(VaricleVulkan
+    INTERFACE
+    VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
     VULKAN_HPP_NO_STRUCT_CONSTRUCTORS=1
   )
 
@@ -46,9 +46,11 @@ add_executable (${TEMPLATE_NAME})
 target_sources(${TEMPLATE_NAME}
     PRIVATE
     src/test.cpp
+    src/vulkan-renderer.cpp
     src/core/init.cpp
-    src/core/debug.cpp
-    # src/vulkan-lean.cpp
+    src/core/device.cpp
+    src/core/validation.cpp
+    src/core/swap-chain.cpp
 )
 
 target_include_directories(${TEMPLATE_NAME}
@@ -59,7 +61,7 @@ target_include_directories(${TEMPLATE_NAME}
 
 set_target_properties (${TEMPLATE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEMPLATE_DIR})
 set_target_properties (${TEMPLATE_NAME} PROPERTIES CXX_STANDARD 23)
-target_link_libraries (${TEMPLATE_NAME} Vulkan::Lean glfw)
+target_link_libraries (${TEMPLATE_NAME} Varicle::Vulkan glfw)
 target_include_directories (${TEMPLATE_NAME} PRIVATE ${STB_INCLUDEDIR})
 
 # Define VULKAN_HPP_HANDLE_ERROR_OUT_OF_DATE_AS_SUCCESS to treat VK_ERROR_OUT_OF_DATE_KHR as a success code

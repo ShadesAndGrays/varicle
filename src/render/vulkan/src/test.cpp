@@ -1,4 +1,4 @@
-#include "vulkan-lean.hpp"
+#include "vulkan-renderer.hpp"
 #include <GLFW/glfw3.h>
 #include <print>
 
@@ -6,12 +6,10 @@ void run() {
     using namespace varicle::render;
 
     IRender* render = new vulkan::VulkanRenderer();
-    render->init(nullptr, 800, 600);
+    render->init(800, 600,"Varicle");
 
     while (!render->should_close_window()) {
         render->begin_frame();
-        glfwPollEvents();
-
         render->end_frame();
     }
     render->shutdown();

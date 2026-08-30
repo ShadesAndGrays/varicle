@@ -3,48 +3,59 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
-#include "vulkan-lean.hpp"
 
 namespace varicle::render::vulkan {
+
+struct QueueFamilyIndices {
+    std::optional<uint32_t> graphics_family;
+    std::optional<uint32_t> present_family;
+    std::optional<uint32_t> transfer_family;
+
+    bool is_complete() const {
+        return graphics_family.has_value() && present_family.has_value() &&
+            transfer_family.has_value();
+    }
+};
 
 struct VulkanContext {
 
     GLFWwindow* m_window             = nullptr;
-    uint32_t    m_queueIndex         = 0; // ~0 = flip 0000000 = 0xFFFFFF
-    uint32_t    m_frameIndex         = 0;
-    bool        m_framebufferResized = false;
+    QueueFamilyIndices m_indices;
+    uint32_t    m_frame_index         = 0;
+    bool        m_framebuffer_resized = false;
 
     // Vulkan member variables
     vk::Instance               m_instance       = nullptr;
-    vk::DebugUtilsMessengerEXT m_debugMessanger = nullptr;
+    vk::DebugUtilsMessengerEXT m_debugMessenger = nullptr;
     vk::SurfaceKHR             m_surface        = nullptr;
-    vk::PhysicalDevice         m_physicalDevice = nullptr;
+    vk::PhysicalDevice         m_physical_device = nullptr;
     vk::Device                 m_device         = nullptr;
 
-    vk::SwapchainKHR           m_swapChain = nullptr;
-    std::vector<vk::Image>     m_swapChainImages;
-    vk::SurfaceFormatKHR       m_swapChainSurfaceFormat;
-    vk::Extent2D               m_swapChainExtent;
-    std::vector<vk::ImageView> m_swapChainImageViews;
+    vk::SwapchainKHR           m_swap_chain = nullptr;
+    std::vector<vk::Image>     m_swap_chain_images;
+    vk::SurfaceFormatKHR       m_swap_chain_surface_format;
+    vk::Extent2D               m_swap_chain_extent;
+    std::vector<vk::ImageView> m_swap_chain_image_views;
 
-    vk::PipelineLayout m_pipelineLayout   = nullptr;
-    vk::Pipeline       m_graphicsPipeline = nullptr;
+    vk::PipelineLayout m_pipeline_layout   = nullptr;
+    vk::Pipeline       m_graphics_pipeline = nullptr;
 
-    vk::CommandPool                m_commandPool = nullptr;
-    std::vector<vk::CommandBuffer> m_commandBuffers;
+    vk::CommandPool                m_command_pool = nullptr;
+    std::vector<vk::CommandBuffer> m_command_buffers;
 
-    std::vector<vk::Semaphore> m_presentCompleteSemaphores;
-    std::vector<vk::Semaphore> m_renderFinishedSemaphores;
-    std::vector<vk::Fence>     m_inFlightFences;
+    std::vector<vk::Semaphore> m_present_complete_semaphores;
+    std::vector<vk::Semaphore> m_render_finished_semaphores;
+    std::vector<vk::Fence>     m_in_flight_fences;
 
-    vk::Buffer       m_vertexBuffer       = nullptr; // interface for memory
-    vk::DeviceMemory m_vertexBufferMemory = nullptr; // actually memory
+    vk::Buffer       m_vertex_buffer       = nullptr; // interface for memory
+    vk::DeviceMemory m_vertex_buffer_memory = nullptr; // actually memory
 
     // These are automatically cleaned up when the device is destroyed
-    vk::Queue m_queue = nullptr; // for graphics and presenting
-                                 //
-                    
+    vk::Queue m_graphics_queue = nullptr; // for graphics and presenting
+    vk::Queue m_present_queue = nullptr; // for graphics and presenting
+    vk::Queue m_transfer_queue = nullptr; // for graphics and presenting
+
     vk::detail::DynamicLoader m_dl;
 };
 
-} // namespace varicle::render
+} // namespace varicle::render::vulkan
