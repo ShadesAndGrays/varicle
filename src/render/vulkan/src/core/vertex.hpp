@@ -1,7 +1,6 @@
 #pragma once
+#include "glm/glm.hpp"
 #include <vulkan/vulkan_raii.hpp>
-#include"glm/glm.hpp"
-
 
 struct Vertex {
     glm::vec2 pos;
@@ -27,9 +26,13 @@ struct Vertex {
 };
 
 const std::vector<Vertex> vertices{
-    { { 0.0f, -0.5f }, { 1.0f, 1.0f, 1.0f } },
-        { { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f } },
-        { { -0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } },
-        { { -0.7f, 0.7f }, { 0.0f, 0.0f, 1.0f } },
+    { { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
+    { { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f } },
+    { { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } },
+    { { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f } },
 };
 
+const std::vector<uint16_t> indices = {
+    0, 1, 2,
+    2, 3, 0
+};

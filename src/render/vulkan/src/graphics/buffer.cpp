@@ -1,6 +1,7 @@
 #include "graphics/buffer.hpp"
 #include "core/config.hpp"
 #include "core/vertex.hpp"
+#include <utility>
 
 namespace varicle::render::vulkan {
 
@@ -12,6 +13,15 @@ void create_command_pool(VulkanContext& ctx) {
 
     ctx.m_command_pool =
         vk::CommandPool(ctx.m_device.createCommandPool(poolInfo));
+
+    // for Transfer
+    vk::CommandPoolCreateInfo transfer_pool_info{
+        .flags            = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+        .queueFamilyIndex = ctx.m_indices.transfer_family.value()
+    };
+
+    ctx.m_transfer_command_pool =
+        vk::CommandPool(ctx.m_device.createCommandPool(transfer_pool_info));
 }
 
 uint32_t find_memory_type(
@@ -33,22 +43,165 @@ uint32_t find_memory_type(
     throw std::runtime_error("failed to find suitable memory type!");
 }
 
-void create_vertex_buffer(VulkanContext& ctx) {
+[[nodiscard(
+    "Buffer needs to be freed manually"
+)]] std::pair<vk::Buffer, vk::DeviceMemory>
+create_buffer(
+    VulkanContext&          ctx,
+    vk::DeviceSize          size,
+    vk::BufferUsageFlags    usage,
+    vk::MemoryPropertyFlags properties,
+    std::span<uint32_t>     queue_family
+) {
+
     vk::BufferCreateInfo buffer_info{
-        .size        = sizeof(vertices[0]) * vertices.size(),
-        .usage       = vk::BufferUsageFlagBits::eVertexBuffer,
-        .sharingMode = vk::SharingMode::eExclusive
+        .size                  = size,
+        .usage                 = usage,
+        .sharingMode           = vk::SharingMode::eConcurrent,
+        .queueFamilyIndexCount = static_cast<uint32_t>(queue_family.size()),
+        .pQueueFamilyIndices   = queue_family.data(),
+    };
+
+    vk::Buffer             buffer = ctx.m_device.createBuffer(buffer_info);
+    vk::MemoryRequirements mem_requirements =
+        ctx.m_device.getBufferMemoryRequirements(buffer);
+    vk::MemoryAllocateInfo memory_allocate_info{
+        .allocationSize = mem_requirements.size,
+        .memoryTypeIndex =
+            find_memory_type(ctx, mem_requirements.memoryTypeBits, properties)
+    };
+    auto buffer_memory = ctx.m_device.allocateMemory(memory_allocate_info);
+    ctx.m_device.bindBufferMemory(buffer, buffer_memory, 0);
+    return { buffer, buffer_memory };
+}
+void copy_buffer(
+    VulkanContext& ctx,
+    vk::Buffer&    src_buffer,
+    vk::Buffer&    dst_buffer,
+    vk::DeviceSize size
+) {
+    auto& commandPool = ctx.m_transfer_command_pool;
+
+    vk::CommandBufferAllocateInfo alloc_info{
+        .commandPool        = commandPool,
+        .level              = vk::CommandBufferLevel::ePrimary,
+        .commandBufferCount = 1,
+    };
+    vk::CommandBuffer temp_command_copy_buffer =
+        ctx.m_device.allocateCommandBuffers(alloc_info).front();
+    temp_command_copy_buffer.begin(
+        { .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit }
+    );
+    temp_command_copy_buffer.copyBuffer(
+        src_buffer, dst_buffer, vk::BufferCopy(0, 0, size)
+    );
+    temp_command_copy_buffer.end();
+
+    ctx.m_transfer_queue.submit(
+        vk::SubmitInfo{
+            .commandBufferCount = 1,
+            .pCommandBuffers    = &temp_command_copy_buffer,
+        },
+        nullptr
+    );
+
+    ctx.m_transfer_queue.waitIdle();
+
+    ctx.m_device.freeCommandBuffers(commandPool, temp_command_copy_buffer);
+}
+
+void create_index_buffer(VulkanContext& ctx) {
+    vk::DeviceSize buffer_size = sizeof(indices[0]) * indices.size();
+
+    std::array<uint32_t, 2> qf = { ctx.m_indices.graphics_family.value(),
+                                   ctx.m_indices.transfer_family.value() };
+
+    auto [staging_buffer, staging_buffer_memory] = create_buffer(
+        ctx,
+        buffer_size,
+        vk::BufferUsageFlagBits::eTransferSrc,
+        vk::MemoryPropertyFlagBits::eHostVisible |
+            vk::MemoryPropertyFlagBits::eHostCoherent,
+        qf
+    );
+
+    void* data = ctx.m_device.mapMemory(staging_buffer_memory, 0, buffer_size);
+    memcpy(data, indices.data(), static_cast<size_t>(buffer_size));
+    ctx.m_device.unmapMemory(staging_buffer_memory);
+    std::tie(ctx.m_index_buffer, ctx.m_index_buffer_memory) = create_buffer(
+        ctx,
+        buffer_size,
+        vk::BufferUsageFlagBits::eIndexBuffer |
+            vk::BufferUsageFlagBits::eTransferDst,
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        qf
+    );
+
+    copy_buffer(ctx, staging_buffer, ctx.m_index_buffer, buffer_size);
+    ctx.m_device.freeMemory(staging_buffer_memory);
+    ctx.m_device.destroyBuffer(staging_buffer);
+}
+
+void create_vertex_buffer(VulkanContext& ctx) {
+    vk::DeviceSize          buffer_size = sizeof(vertices[0]) * vertices.size();
+    std::array<uint32_t, 2> qf = { ctx.m_indices.graphics_family.value(),
+                                   ctx.m_indices.transfer_family.value() };
+
+    auto [staging_buffer, staging_buffer_memory] = create_buffer(
+        ctx,
+        buffer_size,
+        vk::BufferUsageFlagBits::eTransferSrc,
+        vk::MemoryPropertyFlagBits::eHostVisible |
+            vk::MemoryPropertyFlagBits::eHostCoherent,
+        qf
+    );
+    void* data = ctx.m_device.mapMemory(staging_buffer_memory, 0, buffer_size);
+    memcpy(data, vertices.data(), buffer_size);
+    ctx.m_device.unmapMemory(staging_buffer_memory);
+
+    std::tie(ctx.m_vertex_buffer, ctx.m_vertex_buffer_memory) = create_buffer(
+        ctx,
+        buffer_size,
+        vk::BufferUsageFlagBits::eVertexBuffer |
+            vk::BufferUsageFlagBits::eTransferDst,
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        qf
+    );
+
+    copy_buffer(ctx, staging_buffer, ctx.m_vertex_buffer, buffer_size);
+    ctx.m_device.freeMemory(staging_buffer_memory);
+    ctx.m_device.destroyBuffer(staging_buffer);
+}
+
+[[deprecated("Not scalable, create_vertex_buffer")]] void
+create_vertex_buffer_prev(VulkanContext& ctx) {
+    std::array<uint32_t, 2> qf = { ctx.m_indices.graphics_family.value(),
+                                   ctx.m_indices.transfer_family.value() };
+
+    vk::BufferCreateInfo buffer_info{
+        .size  = sizeof(vertices[0]) * vertices.size(),
+        .usage = vk::BufferUsageFlagBits::eVertexBuffer,
+        // setting this to eConcurrent so the buffer can be transfered between
+        // gpu. It's less efficient than exclusive but for not it's fine
+        .sharingMode =
+            vk::SharingMode::eConcurrent, // or vk::SharingMode::eExclusive
+        .queueFamilyIndexCount = qf.size(),
+        .pQueueFamilyIndices   = qf.data(),
     };
     ctx.m_vertex_buffer = ctx.m_device.createBuffer(buffer_info);
 
-    vk::MemoryRequirements memRequirements =
+    vk::MemoryRequirements mem_requirements =
         ctx.m_device.getBufferMemoryRequirements(ctx.m_vertex_buffer);
 
+    /* Allocates memory for the buffer with requested size.
+     * Host Visible: I want to CPU to be able to map too it
+     * Host Coherent: Send now. Do not wait for flush
+     */
     vk::MemoryAllocateInfo memoryAllocateInfo{
-        .allocationSize  = memRequirements.size,
+        .allocationSize  = mem_requirements.size,
         .memoryTypeIndex = find_memory_type(
             ctx,
-            memRequirements.memoryTypeBits,
+            mem_requirements.memoryTypeBits,
             vk::MemoryPropertyFlagBits::eHostVisible |
                 vk::MemoryPropertyFlagBits::eHostCoherent
         )
@@ -72,15 +225,24 @@ void create_command_buffers(VulkanContext& ctx) {
         .level              = vk::CommandBufferLevel::ePrimary,
         .commandBufferCount = MAX_FRAMES_IN_FLIGHT
     };
-    auto result           = ctx.m_device.allocateCommandBuffers(allocInfo);
-    ctx.m_command_buffers = std::move(result);
+    ctx.m_command_buffers = ctx.m_device.allocateCommandBuffers(allocInfo);
+
+    // for create one for buffer transer
+    vk::CommandBufferAllocateInfo trasfer_alloc_info{
+        .commandPool        = ctx.m_transfer_command_pool,
+        .level              = vk::CommandBufferLevel::ePrimary,
+        .commandBufferCount = MAX_FRAMES_IN_FLIGHT
+    };
+    ctx.m_transfer_command_buffers =
+        ctx.m_device.allocateCommandBuffers(trasfer_alloc_info);
 }
 
 void create_sync_objects(VulkanContext& ctx) {
 
     assert(
         ctx.m_present_complete_semaphores.empty() &&
-        ctx.m_render_finished_semaphores.empty() && ctx.m_in_flight_fences.empty()
+        ctx.m_render_finished_semaphores.empty() &&
+        ctx.m_in_flight_fences.empty()
     );
     for (size_t i = 0; i < ctx.m_swap_chain_images.size(); i++) {
         ctx.m_render_finished_semaphores.push_back(
