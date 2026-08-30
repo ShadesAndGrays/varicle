@@ -4,7 +4,7 @@
 namespace varicle::render {
 struct Color {
 
-    uint8_t r, g, b, a;
+    float r = 1.0f, g = 1.0f, b = 1.0f, a = 1.0f;
 };
 
 struct Rect {

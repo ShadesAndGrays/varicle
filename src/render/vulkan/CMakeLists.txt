@@ -51,6 +51,9 @@ target_sources(${TEMPLATE_NAME}
     src/core/device.cpp
     src/core/validation.cpp
     src/core/swap-chain.cpp
+    src/graphics/buffer.cpp
+    src/graphics/pipeline.cpp
+    src/util/image-util.cpp
 )
 
 target_include_directories(${TEMPLATE_NAME}

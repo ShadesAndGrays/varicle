@@ -9,13 +9,15 @@ void create_swap_chain(VulkanContext& ctx) {
     auto surface_capabilities =
         ctx.m_physical_device.getSurfaceCapabilitiesKHR(ctx.m_surface);
 
-    ctx.m_swap_chain_extent  = choose_swap_extent(ctx,surface_capabilities);
-    uint32_t min_image_count = choose_swap_min_image_count(surface_capabilities);
+    ctx.m_swap_chain_extent = choose_swap_extent(ctx, surface_capabilities);
+    uint32_t min_image_count =
+        choose_swap_min_image_count(surface_capabilities);
 
     std::vector<vk::SurfaceFormatKHR> available_formats =
         ctx.m_physical_device.getSurfaceFormatsKHR(ctx.m_surface);
 
-    ctx.m_swap_chain_surface_format = choose_swap_surface_format(available_formats);
+    ctx.m_swap_chain_surface_format =
+        choose_swap_surface_format(available_formats);
 
     std::vector<vk::PresentModeKHR> available_present_modes =
         ctx.m_physical_device.getSurfacePresentModesKHR(ctx.m_surface);
@@ -43,78 +45,117 @@ void create_swap_chain(VulkanContext& ctx) {
     );
 }
 
+uint32_t choose_swap_min_image_count(
+    vk::SurfaceCapabilitiesKHR const& surfaceCapabilities
+) {
+    auto minImageCount = std::max(3u, surfaceCapabilities.minImageCount);
+    if ((0 < surfaceCapabilities.maxImageCount) &&
+        (surfaceCapabilities.maxImageCount < minImageCount)) {
+        minImageCount = surfaceCapabilities.maxImageCount;
+    }
+    return minImageCount;
+}
 
-    uint32_t choose_swap_min_image_count(
-        vk::SurfaceCapabilitiesKHR const& surfaceCapabilities
-    ) {
-        auto minImageCount = std::max(3u, surfaceCapabilities.minImageCount);
-        if ((0 < surfaceCapabilities.maxImageCount) &&
-            (surfaceCapabilities.maxImageCount < minImageCount)) {
-            minImageCount = surfaceCapabilities.maxImageCount;
-        }
-        return minImageCount;
+vk::SurfaceFormatKHR choose_swap_surface_format(
+    std::vector<vk::SurfaceFormatKHR> const& availableFormats
+) {
+    // TODO: Better error handling here
+    assert(!availableFormats.empty());
+
+    const auto formatIt =
+        std::ranges::find_if(availableFormats, [](const auto& format) {
+            return format.format == vk::Format::eB8G8R8A8Srgb &&
+                format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
+        });
+
+    return formatIt != availableFormats.end() ? *formatIt : availableFormats[0];
+}
+
+vk::PresentModeKHR choose_swap_present_mode(
+    std::vector<vk::PresentModeKHR> const& availablePresentModes
+) {
+
+    // Should be guaranteed
+    assert(std::ranges::any_of(availablePresentModes, [](auto presentMode) {
+        return presentMode == vk::PresentModeKHR::eFifo;
+    }));
+
+    return std::ranges::any_of(
+               availablePresentModes,
+               [](const vk::PresentModeKHR value) {
+                   return vk::PresentModeKHR::eMailbox == value;
+               }
+           )
+        ? vk::PresentModeKHR::eMailbox
+        : vk::PresentModeKHR::eFifo;
+
+    return vk::PresentModeKHR::eFifo;
+}
+
+vk::Extent2D choose_swap_extent(
+    VulkanContext&                    ctx,
+    vk::SurfaceCapabilitiesKHR const& capabilities
+) {
+    if (capabilities.currentExtent.width !=
+        std::numeric_limits<uint32_t>::max()) {
+        return capabilities.currentExtent;
     }
 
-    vk::SurfaceFormatKHR choose_swap_surface_format(
-        std::vector<vk::SurfaceFormatKHR> const& availableFormats
-    ) {
-        // TODO: Better error handling here
-        assert(!availableFormats.empty());
+    int width, height;
+    glfwGetFramebufferSize(ctx.m_window, &width, &height);
+    return {
+        std::clamp<uint32_t>(
+            width,
+            capabilities.minImageExtent.width,
+            capabilities.maxImageExtent.width
+        ),
+        std::clamp<uint32_t>(
+            height,
+            capabilities.minImageExtent.height,
+            capabilities.maxImageExtent.height
+        ),
+    };
+}
 
-        const auto formatIt =
-            std::ranges::find_if(availableFormats, [](const auto& format) {
-                return format.format == vk::Format::eB8G8R8A8Srgb &&
-                    format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
-            });
+void create_image_views(VulkanContext& ctx) {
+    assert(ctx.m_swap_chain_image_views.empty());
+    vk::ImageViewCreateInfo image_view_create_info{
+        .viewType         = vk::ImageViewType::e2D,
+        .format           = ctx.m_swap_chain_surface_format.format,
+        .subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 }
+    };
 
-        return formatIt != availableFormats.end() ? *formatIt
-                                                  : availableFormats[0];
+    for (auto& image : ctx.m_swap_chain_images) {
+        image_view_create_info.image = image;
+        ctx.m_swap_chain_image_views.emplace_back(
+            ctx.m_device.createImageView(image_view_create_info)
+        );
     }
+}
 
-    vk::PresentModeKHR choose_swap_present_mode(
-        std::vector<vk::PresentModeKHR> const& availablePresentModes
-    ) {
-
-        // Should be guaranteed
-        assert(std::ranges::any_of(availablePresentModes, [](auto presentMode) {
-            return presentMode == vk::PresentModeKHR::eFifo;
-        }));
-
-        return std::ranges::any_of(
-                   availablePresentModes,
-                   [](const vk::PresentModeKHR value) {
-                       return vk::PresentModeKHR::eMailbox == value;
-                   }
-               )
-            ? vk::PresentModeKHR::eMailbox
-            : vk::PresentModeKHR::eFifo;
-
-        return vk::PresentModeKHR::eFifo;
+void cleanup_swap_chain(VulkanContext& ctx) {
+    for (auto& view : ctx.m_swap_chain_image_views) {
+        ctx.m_device.destroyImageView(view);
     }
+    ctx.m_swap_chain_image_views.clear();
+    ctx.m_device.destroySwapchainKHR(ctx.m_swap_chain);
+    ctx.m_swap_chain = nullptr;
+}
 
-    vk::Extent2D
-    choose_swap_extent(VulkanContext& ctx, vk::SurfaceCapabilitiesKHR const& capabilities) {
-        if (capabilities.currentExtent.width !=
-            std::numeric_limits<uint32_t>::max()) {
-            return capabilities.currentExtent;
-        }
+void recreate_swap_chain(VulkanContext& ctx) {
 
-        int width, height;
+    int width = 0, height = 0;
+    do {
         glfwGetFramebufferSize(ctx.m_window, &width, &height);
-        return {
-            std::clamp<uint32_t>(
-                width,
-                capabilities.minImageExtent.width,
-                capabilities.maxImageExtent.width
-            ),
-            std::clamp<uint32_t>(
-                height,
-                capabilities.minImageExtent.height,
-                capabilities.maxImageExtent.height
-            ),
-        };
-    }
+        glfwWaitEvents();
+    } while (width == 0 || height == 0);
 
+    ctx.m_device.waitIdle();
 
+    cleanup_swap_chain(ctx);
+
+    create_swap_chain(ctx);
+    create_image_views(ctx);
+}
 
 } // namespace varicle::render::vulkan
