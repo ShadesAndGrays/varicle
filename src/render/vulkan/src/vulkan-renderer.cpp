@@ -38,6 +38,7 @@ void VulkanRenderer ::init(
     create_graphics_pipeline(ctx);
     create_command_pool(ctx);
     create_vertex_buffer(ctx);
+    create_index_buffer(ctx);
     create_command_buffers(ctx);
     create_sync_objects(ctx);
 }
@@ -49,25 +50,44 @@ bool VulkanRenderer::should_close_window() {
 void VulkanRenderer::shutdown() {
 
     auto& ctx = impl->v_context;
+    // pause tile gpu isn't doing anything
     ctx.m_device.waitIdle();
 
     std::println("Shutting down....");
+
+    // Synchronization
     for (auto& i : ctx.m_present_complete_semaphores)
         ctx.m_device.destroySemaphore(i);
     for (auto& i : ctx.m_render_finished_semaphores)
         ctx.m_device.destroySemaphore(i);
     for (auto& i : ctx.m_in_flight_fences)
         ctx.m_device.destroyFence(i);
+
+    // Shader
     ctx.m_device.destroyShaderModule(ctx.m_shader_module);
+
+    // Buffers
     ctx.m_device.freeMemory(ctx.m_vertex_buffer_memory);
+    ctx.m_device.freeMemory(ctx.m_index_buffer_memory);
     ctx.m_device.destroyBuffer(ctx.m_vertex_buffer);
+    ctx.m_device.destroyBuffer(ctx.m_index_buffer);
+
+    // Graphics pipeline
     ctx.m_device.destroyPipeline(ctx.m_graphics_pipeline);
     ctx.m_device.destroyPipelineLayout(ctx.m_pipeline_layout);
+
+    // Command pool with command buffers
     ctx.m_device.destroyCommandPool(ctx.m_command_pool);
+    ctx.m_device.destroyCommandPool(ctx.m_transfer_command_pool);
+
+    // Swap chain
     for (auto& view : ctx.m_swap_chain_image_views)
         ctx.m_device.destroyImageView(view);
     ctx.m_device.destroySwapchainKHR(ctx.m_swap_chain);
+
+    // Device
     ctx.m_device.destroy();
+
     ctx.m_instance.destroySurfaceKHR(ctx.m_surface);
 #if !defined(NDEBUG)
     ctx.m_instance.destroyDebugUtilsMessengerEXT(ctx.m_debugMessenger);
@@ -90,9 +110,8 @@ void VulkanRenderer::clear_color(Color background) {
 }
 
 void VulkanRenderer::begin_frame() {
-    auto& ctx = impl->v_context;
+    auto& ctx              = impl->v_context;
     ctx.m_recreating_frame = false;
-    
 
     auto fence_result = ctx.m_device.waitForFences(
         1, &ctx.m_in_flight_fences[ctx.m_frame_index], vk::True, UINT64_MAX
@@ -165,6 +184,7 @@ void VulkanRenderer::begin_frame() {
     cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, ctx.m_graphics_pipeline);
 
     cmd.bindVertexBuffers(0, ctx.m_vertex_buffer, { 0 });
+    cmd.bindIndexBuffer(ctx.m_index_buffer, 0, vk::IndexType::eUint16);
 
     cmd.setViewport(
         0,
@@ -179,13 +199,14 @@ void VulkanRenderer::begin_frame() {
     );
     cmd.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), ctx.m_swap_chain_extent));
 
-    cmd.draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+    cmd.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 }
 
 void VulkanRenderer::end_frame() {
 
     auto& ctx = impl->v_context;
-    if(ctx.m_recreating_frame) return;
+    if (ctx.m_recreating_frame)
+        return;
     ctx.m_command_buffers[ctx.m_frame_index].endRendering();
     const auto imageIndex = ctx.m_image_index;
 

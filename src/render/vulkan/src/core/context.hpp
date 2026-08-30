@@ -48,17 +48,23 @@ struct VulkanContext {
     vk::CommandPool                m_command_pool = nullptr;
     std::vector<vk::CommandBuffer> m_command_buffers;
 
+    vk::CommandPool                m_transfer_command_pool = nullptr;
+    std::vector<vk::CommandBuffer> m_transfer_command_buffers;
+
     std::vector<vk::Semaphore> m_present_complete_semaphores;
     std::vector<vk::Semaphore> m_render_finished_semaphores;
     std::vector<vk::Fence>     m_in_flight_fences;
 
     vk::Buffer       m_vertex_buffer        = nullptr; // interface for memory
     vk::DeviceMemory m_vertex_buffer_memory = nullptr; // actually memory
+                                                       //
+    vk::Buffer       m_index_buffer        = nullptr; // interface for memory
+    vk::DeviceMemory m_index_buffer_memory = nullptr; // actually memory
 
     // These are automatically cleaned up when the device is destroyed
     vk::Queue m_graphics_queue = nullptr; // for graphics and presenting
-    vk::Queue m_present_queue  = nullptr; // for graphics and presenting
-    vk::Queue m_transfer_queue = nullptr; // for graphics and presenting
+    vk::Queue m_present_queue  = nullptr; // for presenting / most cases present == graphics
+    vk::Queue m_transfer_queue = nullptr; // for transfer only
 
     vk::detail::DynamicLoader m_dl;
 };
