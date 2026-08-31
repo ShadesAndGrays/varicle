@@ -1,6 +1,9 @@
 #include "graphics/buffer.hpp"
 #include "core/config.hpp"
 #include "core/vertex.hpp"
+#include <chrono>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <utility>
 
 namespace varicle::render::vulkan {
@@ -57,7 +60,7 @@ create_buffer(
     vk::BufferCreateInfo buffer_info{
         .size                  = size,
         .usage                 = usage,
-        .sharingMode           = vk::SharingMode::eConcurrent,
+        .sharingMode           = queue_family.size() > 1 ? vk::SharingMode::eConcurrent: vk::SharingMode::eExclusive,
         .queueFamilyIndexCount = static_cast<uint32_t>(queue_family.size()),
         .pQueueFamilyIndices   = queue_family.data(),
     };
@@ -74,6 +77,7 @@ create_buffer(
     ctx.m_device.bindBufferMemory(buffer, buffer_memory, 0);
     return { buffer, buffer_memory };
 }
+
 void copy_buffer(
     VulkanContext& ctx,
     vk::Buffer&    src_buffer,
@@ -108,6 +112,56 @@ void copy_buffer(
     ctx.m_transfer_queue.waitIdle();
 
     ctx.m_device.freeCommandBuffers(commandPool, temp_command_copy_buffer);
+}
+
+void create_uniform_buffer(VulkanContext& ctx) {
+
+    std::array<uint32_t, 1> qf{ ctx.m_indices.graphics_family.value() };
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vk::DeviceSize buffer_size   = sizeof(UniformBufferObject);
+        auto [buffer, buffer_memory] = create_buffer(
+            ctx,
+            buffer_size,
+            vk::BufferUsageFlagBits::eUniformBuffer,
+            vk::MemoryPropertyFlagBits::eHostVisible |
+                vk::MemoryPropertyFlagBits::eHostCoherent,
+            qf
+        );
+        ctx.m_uniform_buffers.push_back(buffer);
+        ctx.m_uniform_buffers_memory.push_back(buffer_memory);
+        ctx.m_uniform_buffers_mapped.push_back(ctx.m_device.mapMemory(
+            ctx.m_uniform_buffers_memory.back(), 0, buffer_size
+        ));
+    }
+}
+void update_uniform_buffer(VulkanContext& ctx) {
+    static auto start_time   = std::chrono::high_resolution_clock::now();
+    auto        current_time = std::chrono::high_resolution_clock::now();
+    float time = std::chrono::duration<float, std::chrono::seconds::period>(
+                     current_time - start_time
+    )
+                     .count();
+    UniformBufferObject ubo{};
+    ubo.model = glm::rotate(
+        glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)
+    );
+    ubo.view = glm::lookAt(
+        glm::vec3(2.0f, 2.0f, 2.0f),
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 0.0f, 1.0f)
+    );
+    ubo.proj = glm::perspective(
+        glm::radians(45.0f),
+        static_cast<float>(ctx.m_swap_chain_extent.width) /
+            static_cast<float>(ctx.m_swap_chain_extent.height),
+        0.1f,
+        10.0f
+    );
+    ubo.proj[1][1] *= -1; // flip y
+
+    // This is not that efficient. look into push constants 
+    memcpy(ctx.m_uniform_buffers_mapped[ctx.m_frame_index], &ubo, sizeof(ubo));
 }
 
 void create_index_buffer(VulkanContext& ctx) {

@@ -1,9 +1,79 @@
 #include "graphics/pipeline.hpp"
+#include "core/config.hpp"
 #include "core/context.hpp"
 #include "core/vertex.hpp"
 #include "util/util.hpp"
+#include <print>
 
 namespace varicle::render::vulkan {
+
+void create_descriptor_set(VulkanContext& ctx) {
+    std::vector<vk::DescriptorSetLayout> layouts(
+        MAX_FRAMES_IN_FLIGHT,    ctx.m_descriptor_set_layout
+    );
+    vk::DescriptorSetAllocateInfo alloc_info{
+        .descriptorPool     = ctx.m_descriptor_pool,
+        .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
+        .pSetLayouts        = layouts.data()
+    };
+
+    ctx.m_descriptor_sets = ctx.m_device.allocateDescriptorSets(alloc_info);
+
+    std::println("Descriptor set count: {}",ctx.m_descriptor_sets.size());
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vk::DescriptorBufferInfo buffer_info{
+
+            .buffer = ctx.m_uniform_buffers[i],
+            .offset = 0,
+            .range  = sizeof(UniformBufferObject)
+        };
+
+        vk::WriteDescriptorSet descriptor_write{
+            .dstSet          = ctx.m_descriptor_sets[i],
+            .dstBinding      = 0,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType  = vk::DescriptorType::eUniformBuffer,
+            .pBufferInfo     = &buffer_info
+        };
+
+        ctx.m_device.updateDescriptorSets(descriptor_write, {});
+    }
+}
+
+void create_descriptor_set_layout(VulkanContext& ctx) {
+    vk::DescriptorSetLayoutBinding ubo_layout_binding{
+        .binding         = 0,
+        .descriptorType  = vk::DescriptorType::eUniformBuffer,
+        .descriptorCount = 1,
+        .stageFlags      = vk::ShaderStageFlagBits::eVertex
+    };
+    vk::DescriptorSetLayoutCreateInfo layout_info{ .bindingCount = 1,
+                                                   .pBindings =
+                                                       &ubo_layout_binding };
+    ctx.m_descriptor_set_layout =
+        ctx.m_device.createDescriptorSetLayout(layout_info);
+}
+
+void create_descriptor_pool(VulkanContext& ctx) {
+
+    vk::DescriptorPoolSize pool_size{ .type =
+                                          vk::DescriptorType::eUniformBuffer,
+                                      .descriptorCount = MAX_FRAMES_IN_FLIGHT };
+
+    /*
+     * eFreeDescriptorSet allows use to free the descriptor
+     */
+    vk::DescriptorPoolCreateInfo pool_info{
+        .flags         = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+        .maxSets       = MAX_FRAMES_IN_FLIGHT,
+        .poolSizeCount = 1,
+        .pPoolSizes    = &pool_size
+    };
+
+    ctx.m_descriptor_pool = ctx.m_device.createDescriptorPool(pool_info);
+}
 
 vk::ShaderModule
 create_shader_module(const VulkanContext& ctx, const std::vector<char>& code) {
@@ -18,7 +88,8 @@ create_shader_module(const VulkanContext& ctx, const std::vector<char>& code) {
 
 void create_graphics_pipeline(VulkanContext& ctx) {
 
-    ctx.m_shader_module = create_shader_module(ctx, readFile("shaders/slang.spv"));
+    ctx.m_shader_module =
+        create_shader_module(ctx, readFile("shaders/slang.spv"));
     vk::ShaderModule& shaderModule = ctx.m_shader_module;
 
     // NOTE: What is the name of the types of pipeline?
@@ -78,7 +149,8 @@ void create_graphics_pipeline(VulkanContext& ctx) {
         .rasterizerDiscardEnable = vk::False,
         .polygonMode             = vk::PolygonMode::eFill,
         .cullMode                = vk::CullModeFlagBits::eBack,
-        .frontFace               = vk::FrontFace::eClockwise,
+        // .frontFace               = vk::FrontFace::eClockwise,
+        .frontFace               = vk::FrontFace::eCounterClockwise,
         .depthBiasEnable         = vk::False,
         .lineWidth               = 1.0f
     };
@@ -112,9 +184,11 @@ void create_graphics_pipeline(VulkanContext& ctx) {
         .pAttachments    = &colorBlendAttachment
     };
 
-    vk::PipelineLayoutCreateInfo pipelineLayoutInfo{ .setLayoutCount = 0,
-                                                     .pushConstantRangeCount =
-                                                         0 };
+    vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
+        .setLayoutCount         = 1,
+        .pSetLayouts            = &ctx.m_descriptor_set_layout,
+        .pushConstantRangeCount = 0
+    };
 
     ctx.m_pipeline_layout = vk::PipelineLayout(
         ctx.m_device.createPipelineLayout(pipelineLayoutInfo)
