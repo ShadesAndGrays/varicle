@@ -2,6 +2,10 @@
 
 namespace varicle::render::vulkan {
 
+void create_descriptor_set_layout(VulkanContext& ctx);
+void create_descriptor_pool(VulkanContext& ctx);
+void create_descriptor_set(VulkanContext& ctx);
+
 void create_graphics_pipeline(VulkanContext& ctx);
 
 [[nodiscard]] vk::ShaderModule

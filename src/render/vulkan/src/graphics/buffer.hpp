@@ -7,6 +7,8 @@ void create_command_pool(VulkanContext& ctx);
 
 void create_vertex_buffer(VulkanContext& ctx);
 void create_index_buffer(VulkanContext& ctx);
+void create_uniform_buffer(VulkanContext& ctx);
+void update_uniform_buffer(VulkanContext& ctx);
 
 void create_command_buffers(VulkanContext& ctx);
 

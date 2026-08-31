@@ -35,10 +35,14 @@ void VulkanRenderer ::init(
     create_logical_device(ctx);
     create_swap_chain(ctx);
     create_image_views(ctx);
+    create_descriptor_set_layout(ctx);
     create_graphics_pipeline(ctx);
     create_command_pool(ctx);
     create_vertex_buffer(ctx);
     create_index_buffer(ctx);
+    create_uniform_buffer(ctx);
+    create_descriptor_pool(ctx);
+    create_descriptor_set(ctx);
     create_command_buffers(ctx);
     create_sync_objects(ctx);
 }
@@ -66,15 +70,25 @@ void VulkanRenderer::shutdown() {
     // Shader
     ctx.m_device.destroyShaderModule(ctx.m_shader_module);
 
+    ctx.m_device.destroyDescriptorPool(ctx.m_descriptor_pool);
+
     // Buffers
     ctx.m_device.freeMemory(ctx.m_vertex_buffer_memory);
     ctx.m_device.freeMemory(ctx.m_index_buffer_memory);
     ctx.m_device.destroyBuffer(ctx.m_vertex_buffer);
     ctx.m_device.destroyBuffer(ctx.m_index_buffer);
 
+    for (auto& i : ctx.m_uniform_buffers_memory) {
+        ctx.m_device.freeMemory(i);
+    }
+    for (auto& i : ctx.m_uniform_buffers) {
+        ctx.m_device.destroyBuffer(i);
+    }
+
     // Graphics pipeline
     ctx.m_device.destroyPipeline(ctx.m_graphics_pipeline);
     ctx.m_device.destroyPipelineLayout(ctx.m_pipeline_layout);
+    ctx.m_device.destroyDescriptorSetLayout(ctx.m_descriptor_set_layout);
 
     // Command pool with command buffers
     ctx.m_device.destroyCommandPool(ctx.m_command_pool);
@@ -199,7 +213,16 @@ void VulkanRenderer::begin_frame() {
     );
     cmd.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), ctx.m_swap_chain_extent));
 
+    cmd.bindDescriptorSets(
+        vk::PipelineBindPoint::eGraphics,
+        ctx.m_pipeline_layout,
+        0,
+        ctx.m_descriptor_sets[ctx.m_frame_index],
+        nullptr
+    );
     cmd.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+
+    update_uniform_buffer(ctx);
 }
 
 void VulkanRenderer::end_frame() {

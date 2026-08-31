@@ -9,10 +9,11 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).parent.resolve()
 ROOT_DIR = SCRIPT_DIR.parent
 BUILD_DIR = ROOT_DIR / "build"
+SHADER_DIR = ROOT_DIR / "shaders"
 
 def run_cmd(cmd,cwd=ROOT_DIR):
     """run shell commands cleanly"""
-    print(f"--> Executing: {' '.join(cmd)})")
+    print(f"--> Executing: {' '.join(cmd)}")
     result  = subprocess.run(cmd,cwd=cwd)
     if result.returncode != 0:
         print(f"Error: Command failed with code {result.returncode}")
@@ -29,6 +30,12 @@ def action_build(args):
     if not args.noconfig:
         run_cmd(["cmake","-B", str(BUILD_DIR), f"-DCMAKE_BUILD_TYPE={config}"])
     run_cmd(["cmake","--build", str(BUILD_DIR), "--parallel"])
+
+
+def compile_shader(args):
+    """Compiling shader"""
+    print(f"Compiling shader...")
+    run_cmd(["bash","./compile.sh"],ROOT_DIR / "shaders")
 
 def action_run(args):
     """Build (if needed) and run the executable."""
@@ -50,6 +57,9 @@ def main():
 
     clean_parser = subparsers.add_parser("clean", help="Clear bulid artifacts")
     clean_parser.set_defaults(func=action_clean)
+
+    shader_parser = subparsers.add_parser("shader", help="Compile shader")
+    shader_parser.set_defaults(func=compile_shader)
 
     run_parser = subparsers.add_parser("run", help="Run the build")
     _ = run_parser.add_argument("--debug",action="store_true", help="Build in Debug mode")

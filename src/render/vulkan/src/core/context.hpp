@@ -24,7 +24,7 @@ struct VulkanContext {
     uint32_t            m_frame_index         = 0;
     bool                m_framebuffer_resized = false;
     uint32_t            m_image_index         = 0;
-    bool                m_recreating_frame           = false;
+    bool                m_recreating_frame    = false;
     vk::ClearColorValue m_clear_color =
         vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -41,9 +41,12 @@ struct VulkanContext {
     vk::Extent2D               m_swap_chain_extent;
     std::vector<vk::ImageView> m_swap_chain_image_views;
 
-    vk::PipelineLayout m_pipeline_layout   = nullptr;
-    vk::Pipeline       m_graphics_pipeline = nullptr;
-    vk::ShaderModule   m_shader_module     = nullptr;
+    vk::DescriptorSetLayout        m_descriptor_set_layout = nullptr;
+    vk::PipelineLayout             m_pipeline_layout       = nullptr;
+    vk::Pipeline                   m_graphics_pipeline     = nullptr;
+    vk::ShaderModule               m_shader_module         = nullptr;
+    vk::DescriptorPool             m_descriptor_pool       = nullptr;
+    std::vector<vk::DescriptorSet> m_descriptor_sets;
 
     vk::CommandPool                m_command_pool = nullptr;
     std::vector<vk::CommandBuffer> m_command_buffers;
@@ -58,12 +61,17 @@ struct VulkanContext {
     vk::Buffer       m_vertex_buffer        = nullptr; // interface for memory
     vk::DeviceMemory m_vertex_buffer_memory = nullptr; // actually memory
                                                        //
-    vk::Buffer       m_index_buffer        = nullptr; // interface for memory
-    vk::DeviceMemory m_index_buffer_memory = nullptr; // actually memory
+    vk::Buffer       m_index_buffer        = nullptr;  // interface for memory
+    vk::DeviceMemory m_index_buffer_memory = nullptr;  // actually memory
+
+    std::vector<vk::Buffer>       m_uniform_buffers;
+    std::vector<vk::DeviceMemory> m_uniform_buffers_memory;
+    std::vector<void*>            m_uniform_buffers_mapped;
 
     // These are automatically cleaned up when the device is destroyed
     vk::Queue m_graphics_queue = nullptr; // for graphics and presenting
-    vk::Queue m_present_queue  = nullptr; // for presenting / most cases present == graphics
+    vk::Queue m_present_queue =
+        nullptr; // for presenting / most cases present == graphics
     vk::Queue m_transfer_queue = nullptr; // for transfer only
 
     vk::detail::DynamicLoader m_dl;
