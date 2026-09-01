@@ -3,6 +3,7 @@
 #include "core/vertex.hpp"
 #include "util/command.hpp"
 #include <chrono>
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE // Depth 0 - 1 rather than -1 to 1
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <utility>
@@ -296,5 +297,7 @@ void create_sync_objects(VulkanContext& ctx) {
         ));
     }
 }
+
+
 
 } // namespace varicle::render::vulkan

@@ -10,13 +10,14 @@ namespace varicle::render::vulkan {
 
 void transition_image_layout(
     VulkanContext&          ctx,
-    uint32_t                imageIndex,
+    vk::Image                image,
     vk::ImageLayout         old_layout,
     vk::ImageLayout         new_layout,
     vk::AccessFlags2        src_access_mask,
     vk::AccessFlags2        dst_access_mask,
     vk::PipelineStageFlags2 src_stage_mask,
-    vk::PipelineStageFlags2 dst_stage_mask
+    vk::PipelineStageFlags2 dst_stage_mask,
+    vk::ImageAspectFlags    image_aspect_flags
 ) {
     vk::ImageMemoryBarrier2 barrier{
         .srcStageMask        = src_stage_mask,
@@ -27,8 +28,8 @@ void transition_image_layout(
         .newLayout           = new_layout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image               = ctx.m_swap_chain_images[imageIndex],
-        .subresourceRange    = { .aspectMask     = vk::ImageAspectFlagBits::eColor,
+        .image               = image,
+        .subresourceRange    = { .aspectMask     = image_aspect_flags,
                                  .baseMipLevel   = 0,
                                  .levelCount     = 1,
                                  .baseArrayLayer = 0,
@@ -229,16 +230,17 @@ void copy_buffer_to_image(
 }
 
 vk::ImageView create_image_view(
-    VulkanContext&   ctx,
-    vk::Image const& image,
-    vk::Format       format
+    VulkanContext&       ctx,
+    vk::Image const&     image,
+    vk::Format           format,
+    vk::ImageAspectFlags aspect_flag
 ) {
     vk::ImageViewCreateInfo view_info{
 
         .image            = image,
         .viewType         = vk::ImageViewType::e2D,
         .format           = format,
-        .subresourceRange = { .aspectMask     = vk::ImageAspectFlagBits::eColor,
+        .subresourceRange = { .aspectMask     = aspect_flag,
                               .baseMipLevel   = 0,
                               .levelCount     = 1,
                               .baseArrayLayer = 0,
@@ -250,7 +252,7 @@ vk::ImageView create_image_view(
 void create_texture_image_view(VulkanContext& ctx) {
 
     ctx.m_texture_image_view =
-        create_image_view(ctx, ctx.m_texture_image, vk::Format::eR8G8B8A8Srgb);
+        create_image_view(ctx, ctx.m_texture_image, vk::Format::eR8G8B8A8Srgb,vk::ImageAspectFlagBits::eColor);
 }
 
 void create_texture_sampler(VulkanContext& ctx) {
@@ -265,12 +267,60 @@ void create_texture_sampler(VulkanContext& ctx) {
         .addressModeW     = vk::SamplerAddressMode::eRepeat,
         .anisotropyEnable = vk::True,
         .maxAnisotropy    = properties.limits.maxSamplerAnisotropy,
-        .compareEnable = vk::False,
-        .compareOp  = vk::CompareOp::eAlways
+        .compareEnable    = vk::False,
+        .compareOp        = vk::CompareOp::eAlways
     };
 
     ctx.m_texture_sampler = ctx.m_device.createSampler(sampler_info);
+}
 
+vk::Format find_supported_format(
+    VulkanContext&                 ctx,
+    const std::vector<vk::Format>& candidates,
+    vk::ImageTiling                tiling,
+    vk::FormatFeatureFlags         features
+) {
+    for (const auto format : candidates) {
+        vk::FormatProperties props =
+            ctx.m_physical_device.getFormatProperties(format);
+
+        if (((tiling == vk::ImageTiling::eLinear) &&
+             ((props.linearTilingFeatures & features) == features)) ||
+            ((tiling == vk::ImageTiling::eOptimal) &&
+             ((props.optimalTilingFeatures & features) == features))) {
+            return format;
+        }
+    }
+    throw std::runtime_error("failed to find supported format!");
+}
+
+vk::Format find_depth_format(VulkanContext& ctx) {
+    return find_supported_format(
+        ctx,
+        { vk::Format::eD32Sfloat,
+          vk::Format::eD32SfloatS8Uint,
+          vk::Format::eD24UnormS8Uint },
+        vk::ImageTiling::eOptimal,
+        vk::FormatFeatureFlagBits::eDepthStencilAttachment
+    );
+}
+
+void create_depth_resources(VulkanContext& ctx) {
+    vk::Format depth_format = find_depth_format(ctx);
+    std::tie(ctx.m_depth_image, ctx.m_depth_image_memory) = create_image(
+        ctx,
+        ctx.m_swap_chain_extent.width,
+        ctx.m_swap_chain_extent.height,
+        depth_format,
+        vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eDepthStencilAttachment,
+        vk::MemoryPropertyFlagBits::eDeviceLocal
+    );
+
+    ctx.m_depth_image_view = create_image_view(
+        ctx, ctx.m_depth_image, depth_format, vk::ImageAspectFlagBits::eDepth
+    );
+    ctx.m_depth_format = depth_format;
 }
 
 } // namespace varicle::render::vulkan

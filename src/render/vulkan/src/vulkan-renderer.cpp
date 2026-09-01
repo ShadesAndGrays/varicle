@@ -36,12 +36,13 @@ void VulkanRenderer ::init(
     create_swap_chain(ctx);
     create_image_views(ctx);
     create_descriptor_set_layout(ctx);
-    create_graphics_pipeline(ctx);
     create_command_pool(ctx);
+    create_depth_resources(ctx);
+    create_graphics_pipeline(ctx);
     create_vertex_buffer(ctx);
     create_texture_image(ctx);
     create_texture_image_view(ctx);
-    create_texture_sampler( ctx);
+    create_texture_sampler(ctx);
     create_index_buffer(ctx);
     create_uniform_buffer(ctx);
     create_descriptor_pool(ctx);
@@ -76,11 +77,15 @@ void VulkanRenderer::shutdown() {
     ctx.m_device.destroyDescriptorPool(ctx.m_descriptor_pool);
 
     // images
-    
     ctx.m_device.destroySampler(ctx.m_texture_sampler);
     ctx.m_device.destroyImageView(ctx.m_texture_image_view);
     ctx.m_device.freeMemory(ctx.m_texture_image_memory);
     ctx.m_device.destroyImage(ctx.m_texture_image);
+
+    ctx.m_device.destroyImageView(ctx.m_depth_image_view);
+    ctx.m_device.freeMemory(ctx.m_depth_image_memory);
+    ctx.m_device.destroyImage(ctx.m_depth_image);
+
     // Buffers
     ctx.m_device.freeMemory(ctx.m_vertex_buffer_memory);
     ctx.m_device.freeMemory(ctx.m_index_buffer_memory);
@@ -130,6 +135,8 @@ void VulkanRenderer::clear_color(Color background) {
     ctx.m_clear_color = vk::ClearColorValue(
         background.r, background.g, background.b, background.a
     );
+
+    ctx.m_clear_depth = vk::ClearDepthStencilValue(1.0f, 0);
 }
 
 void VulkanRenderer::begin_frame() {
@@ -176,31 +183,55 @@ void VulkanRenderer::begin_frame() {
     vk::CommandBufferBeginInfo begin_info{};
     result = cmd.begin(&begin_info);
 
+    // Transition swap chain image to optimal layout for rendering
     transition_image_layout(
         ctx,
-        image_index,
+        ctx.m_swap_chain_images[image_index],
         vk::ImageLayout::eUndefined,
         vk::ImageLayout::eColorAttachmentOptimal,
         {},
         vk::AccessFlagBits2::eColorAttachmentWrite,
         vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-        vk::PipelineStageFlagBits2::eColorAttachmentOutput
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        vk::ImageAspectFlagBits::eColor
     );
 
-    vk::ClearValue              clearColor     = ctx.m_clear_color;
-    vk::RenderingAttachmentInfo attachmentInfo = {
+    // Transition depth_image image to optimal depth layout
+    transition_image_layout(
+        ctx,
+        ctx.m_depth_image,
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eDepthAttachmentOptimal,
+        vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+        vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+        vk::PipelineStageFlagBits2::eEarlyFragmentTests |  vk::PipelineStageFlagBits2::eLateFragmentTests,
+        vk::PipelineStageFlagBits2::eEarlyFragmentTests |  vk::PipelineStageFlagBits2::eLateFragmentTests,
+        vk::ImageAspectFlagBits::eDepth
+    );
+
+
+    vk::RenderingAttachmentInfo clear_attachment_info = {
         .imageView   = ctx.m_swap_chain_image_views[image_index],
         .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
         .loadOp      = vk::AttachmentLoadOp::eClear,
         .storeOp     = vk::AttachmentStoreOp::eStore,
-        .clearValue  = clearColor
+        .clearValue  = ctx.m_clear_color
+    };
+
+    vk::RenderingAttachmentInfo depth_attachment_Info = {
+        .imageView   = ctx.m_depth_image_view,
+        .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+        .loadOp      = vk::AttachmentLoadOp::eClear,
+        .storeOp     = vk::AttachmentStoreOp::eDontCare,
+        .clearValue  = ctx.m_clear_depth
     };
 
     vk::RenderingInfo rendering_info = {
         .renderArea = { .offset = { 0, 0 }, .extent = ctx.m_swap_chain_extent },
         .layerCount = 1,
         .colorAttachmentCount = 1,
-        .pColorAttachments    = &attachmentInfo
+        .pColorAttachments    = &clear_attachment_info,
+        .pDepthAttachment     = &depth_attachment_Info
     };
 
     cmd.beginRendering(rendering_info);
@@ -240,20 +271,24 @@ void VulkanRenderer::end_frame() {
     if (ctx.m_recreating_frame)
         return;
     ctx.m_command_buffers[ctx.m_frame_index].endRendering();
-    const auto imageIndex = ctx.m_image_index;
+    const auto image_index = ctx.m_image_index;
 
     transition_image_layout(
         ctx,
-        imageIndex,
+        ctx.m_swap_chain_images[image_index],
         vk::ImageLayout::eColorAttachmentOptimal,
         vk::ImageLayout::ePresentSrcKHR,
         vk::AccessFlagBits2::eColorAttachmentWrite,
         {},
         vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-        vk::PipelineStageFlagBits2::eBottomOfPipe
+        vk::PipelineStageFlagBits2::eBottomOfPipe,
+        vk::ImageAspectFlagBits::eColor
     );
 
+
+
     ctx.m_command_buffers[ctx.m_frame_index].end();
+
 
     vk::PipelineStageFlags waitDestinationStageMask(
         vk::PipelineStageFlagBits::eColorAttachmentOutput
@@ -266,7 +301,7 @@ void VulkanRenderer::end_frame() {
         .commandBufferCount   = 1,
         .pCommandBuffers      = &ctx.m_command_buffers[ctx.m_frame_index],
         .signalSemaphoreCount = 1,
-        .pSignalSemaphores    = &ctx.m_render_finished_semaphores[imageIndex]
+        .pSignalSemaphores    = &ctx.m_render_finished_semaphores[image_index]
     };
 
     ctx.m_graphics_queue.submit(
@@ -275,10 +310,10 @@ void VulkanRenderer::end_frame() {
 
     const vk::PresentInfoKHR presentInfoKHR{
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores    = &ctx.m_render_finished_semaphores[imageIndex],
+        .pWaitSemaphores    = &ctx.m_render_finished_semaphores[image_index],
         .swapchainCount     = 1,
         .pSwapchains        = &ctx.m_swap_chain,
-        .pImageIndices      = &imageIndex
+        .pImageIndices      = &image_index
         // presentInfoKHR.pResults = nullptr;
     };
 
