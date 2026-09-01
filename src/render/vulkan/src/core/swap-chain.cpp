@@ -1,5 +1,5 @@
 #include "core/swap-chain.hpp"
-
+#include "graphics/image.hpp"
 #include <print>
 
 namespace varicle::render::vulkan {
@@ -119,16 +119,10 @@ vk::Extent2D choose_swap_extent(
 
 void create_image_views(VulkanContext& ctx) {
     assert(ctx.m_swap_chain_image_views.empty());
-    vk::ImageViewCreateInfo image_view_create_info{
-        .viewType         = vk::ImageViewType::e2D,
-        .format           = ctx.m_swap_chain_surface_format.format,
-        .subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 }
-    };
 
     for (auto& image : ctx.m_swap_chain_images) {
-        image_view_create_info.image = image;
         ctx.m_swap_chain_image_views.emplace_back(
-            ctx.m_device.createImageView(image_view_create_info)
+                create_image_view(ctx,image,ctx.m_swap_chain_surface_format.format)
         );
     }
 }

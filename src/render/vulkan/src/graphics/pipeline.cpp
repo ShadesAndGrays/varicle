@@ -9,7 +9,7 @@ namespace varicle::render::vulkan {
 
 void create_descriptor_set(VulkanContext& ctx) {
     std::vector<vk::DescriptorSetLayout> layouts(
-        MAX_FRAMES_IN_FLIGHT,    ctx.m_descriptor_set_layout
+        MAX_FRAMES_IN_FLIGHT, ctx.m_descriptor_set_layout
     );
     vk::DescriptorSetAllocateInfo alloc_info{
         .descriptorPool     = ctx.m_descriptor_pool,
@@ -17,9 +17,10 @@ void create_descriptor_set(VulkanContext& ctx) {
         .pSetLayouts        = layouts.data()
     };
 
+    // This guy here is where we allocate the memory
     ctx.m_descriptor_sets = ctx.m_device.allocateDescriptorSets(alloc_info);
 
-    std::println("Descriptor set count: {}",ctx.m_descriptor_sets.size());
+    std::println("Descriptor set count: {}", ctx.m_descriptor_sets.size());
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vk::DescriptorBufferInfo buffer_info{
@@ -28,48 +29,81 @@ void create_descriptor_set(VulkanContext& ctx) {
             .offset = 0,
             .range  = sizeof(UniformBufferObject)
         };
-
-        vk::WriteDescriptorSet descriptor_write{
-            .dstSet          = ctx.m_descriptor_sets[i],
-            .dstBinding      = 0,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType  = vk::DescriptorType::eUniformBuffer,
-            .pBufferInfo     = &buffer_info
+        vk::DescriptorImageInfo image_info{
+            .sampler     = ctx.m_texture_sampler,
+            .imageView   = ctx.m_texture_image_view,
+            .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
         };
+
+        std::array<vk::WriteDescriptorSet, 2> descriptor_write
+
+            { { { .dstSet          = ctx.m_descriptor_sets[i],
+                  .dstBinding      = 0,
+                  .dstArrayElement = 0,
+                  .descriptorCount = 1,
+                  .descriptorType  = vk::DescriptorType::eUniformBuffer,
+                  .pBufferInfo     = &buffer_info },
+
+                { .dstSet          = ctx.m_descriptor_sets[i],
+                  .dstBinding      = 1,
+                  .dstArrayElement = 0,
+                  .descriptorCount = 1,
+                  .descriptorType  = vk::DescriptorType::eCombinedImageSampler,
+                  .pImageInfo     = &image_info } } };
 
         ctx.m_device.updateDescriptorSets(descriptor_write, {});
     }
 }
 
 void create_descriptor_set_layout(VulkanContext& ctx) {
-    vk::DescriptorSetLayoutBinding ubo_layout_binding{
-        .binding         = 0,
-        .descriptorType  = vk::DescriptorType::eUniformBuffer,
-        .descriptorCount = 1,
-        .stageFlags      = vk::ShaderStageFlagBits::eVertex
+    /*
+     * Creating a layout for binding
+     */
+    std::array<vk::DescriptorSetLayoutBinding, 2> ubo_layout_bindings{
+        { { .binding         = 0,
+            .descriptorType  = vk::DescriptorType::eUniformBuffer,
+            .descriptorCount = 1,
+            .stageFlags      = vk::ShaderStageFlagBits::eVertex },
+          { .binding         = 1,
+            .descriptorType  = vk::DescriptorType::eCombinedImageSampler,
+            .descriptorCount = 1,
+            .stageFlags      = vk::ShaderStageFlagBits::eFragment } }
     };
-    vk::DescriptorSetLayoutCreateInfo layout_info{ .bindingCount = 1,
-                                                   .pBindings =
-                                                       &ubo_layout_binding };
+    vk::DescriptorSetLayoutCreateInfo layout_info{
+        .bindingCount = static_cast<uint32_t>(ubo_layout_bindings.size()),
+        .pBindings    = ubo_layout_bindings.data()
+
+    };
     ctx.m_descriptor_set_layout =
         ctx.m_device.createDescriptorSetLayout(layout_info);
 }
 
 void create_descriptor_pool(VulkanContext& ctx) {
 
-    vk::DescriptorPoolSize pool_size{ .type =
-                                          vk::DescriptorType::eUniformBuffer,
-                                      .descriptorCount = MAX_FRAMES_IN_FLIGHT };
+    std::array<vk::DescriptorPoolSize, 2> pool_size{
+        { {
+              .type            = vk::DescriptorType::eUniformBuffer,
+              .descriptorCount = MAX_FRAMES_IN_FLIGHT,
+          },
+          {
+              .type            = vk::DescriptorType::eCombinedImageSampler,
+              .descriptorCount = MAX_FRAMES_IN_FLIGHT,
+
+          } }
+    };
 
     /*
      * eFreeDescriptorSet allows use to free the descriptor
+     * Inadequate descriptor pools are problems that validation layers man not
+     * catch. Some may throw OutOfPoolMemory others the GPU may resolve it's
+     * self
      */
+
     vk::DescriptorPoolCreateInfo pool_info{
         .flags         = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
         .maxSets       = MAX_FRAMES_IN_FLIGHT,
-        .poolSizeCount = 1,
-        .pPoolSizes    = &pool_size
+        .poolSizeCount = static_cast<uint32_t>(pool_size.size()),
+        .pPoolSizes    = pool_size.data()
     };
 
     ctx.m_descriptor_pool = ctx.m_device.createDescriptorPool(pool_info);
@@ -150,9 +184,9 @@ void create_graphics_pipeline(VulkanContext& ctx) {
         .polygonMode             = vk::PolygonMode::eFill,
         .cullMode                = vk::CullModeFlagBits::eBack,
         // .frontFace               = vk::FrontFace::eClockwise,
-        .frontFace               = vk::FrontFace::eCounterClockwise,
-        .depthBiasEnable         = vk::False,
-        .lineWidth               = 1.0f
+        .frontFace       = vk::FrontFace::eCounterClockwise,
+        .depthBiasEnable = vk::False,
+        .lineWidth       = 1.0f
     };
 
     // Anti-aliasing. Not enabled for now

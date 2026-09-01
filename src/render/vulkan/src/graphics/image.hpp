@@ -1,0 +1,54 @@
+#pragma once
+
+#include "core/context.hpp"
+#include <vulkan/vulkan.hpp>
+
+namespace varicle::render::vulkan {
+void transition_image_layout(
+    VulkanContext&          ctx,
+    uint32_t                imageIndex,
+    vk::ImageLayout         old_layout,
+    vk::ImageLayout         new_layout,
+    vk::AccessFlags2        src_access_mask,
+    vk::AccessFlags2        dst_access_mask,
+    vk::PipelineStageFlags2 src_stage_mask,
+    vk::PipelineStageFlags2 dst_stage_mask
+);
+
+void transition_image_layout(
+    vk::CommandBuffer command_buffer,
+    vk::Image         image,
+    vk::ImageLayout   old_layout,
+    vk::ImageLayout   new_layout
+);
+
+void create_texture_image(VulkanContext& ctx);
+void create_texture_image_view(VulkanContext& ctx);
+vk::ImageView create_image_view(
+    VulkanContext&   ctx,
+    vk::Image const& image,
+    vk::Format       format
+);
+
+std::pair<vk::Image, vk::DeviceMemory> create_image(
+    VulkanContext&          ctx,
+    uint32_t                width,
+    uint32_t                height,
+    vk::Format              format,
+    vk::ImageTiling         tiling,
+    vk::ImageUsageFlags     usage,
+    vk::MemoryPropertyFlags propreties
+);
+
+void copy_buffer_to_image(
+    vk::CommandBuffer command_buffer,
+    const vk::Buffer& buffer,
+    vk::Image         image,
+    uint32_t          width,
+    uint32_t          height
+);
+
+
+void create_texture_sampler(VulkanContext& ctx);
+
+} // namespace varicle::render::vulkan

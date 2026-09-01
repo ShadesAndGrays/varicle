@@ -68,6 +68,13 @@ struct VulkanContext {
     std::vector<vk::DeviceMemory> m_uniform_buffers_memory;
     std::vector<void*>            m_uniform_buffers_mapped;
 
+    // I assume this should be would be from a
+    // pool of memory in our custom allocator
+    vk::Image        m_texture_image        = nullptr;
+    vk::ImageView    m_texture_image_view   = nullptr;
+    vk::Sampler      m_texture_sampler      = nullptr;
+    vk::DeviceMemory m_texture_image_memory = nullptr;
+
     // These are automatically cleaned up when the device is destroyed
     vk::Queue m_graphics_queue = nullptr; // for graphics and presenting
     vk::Queue m_present_queue =

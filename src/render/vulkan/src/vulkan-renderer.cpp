@@ -8,8 +8,8 @@
 #include "core/validation.hpp"
 #include "core/vertex.hpp"
 #include "graphics/buffer.hpp"
+#include "graphics/image.hpp"
 #include "graphics/pipeline.hpp"
-#include "util/image-util.hpp"
 
 #include <print>
 
@@ -39,6 +39,9 @@ void VulkanRenderer ::init(
     create_graphics_pipeline(ctx);
     create_command_pool(ctx);
     create_vertex_buffer(ctx);
+    create_texture_image(ctx);
+    create_texture_image_view(ctx);
+    create_texture_sampler( ctx);
     create_index_buffer(ctx);
     create_uniform_buffer(ctx);
     create_descriptor_pool(ctx);
@@ -72,6 +75,12 @@ void VulkanRenderer::shutdown() {
 
     ctx.m_device.destroyDescriptorPool(ctx.m_descriptor_pool);
 
+    // images
+    
+    ctx.m_device.destroySampler(ctx.m_texture_sampler);
+    ctx.m_device.destroyImageView(ctx.m_texture_image_view);
+    ctx.m_device.freeMemory(ctx.m_texture_image_memory);
+    ctx.m_device.destroyImage(ctx.m_texture_image);
     // Buffers
     ctx.m_device.freeMemory(ctx.m_vertex_buffer_memory);
     ctx.m_device.freeMemory(ctx.m_index_buffer_memory);

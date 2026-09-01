@@ -1,6 +1,7 @@
 #include "graphics/buffer.hpp"
 #include "core/config.hpp"
 #include "core/vertex.hpp"
+#include "util/command.hpp"
 #include <chrono>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -57,12 +58,16 @@ create_buffer(
     std::span<uint32_t>     queue_family
 ) {
 
+    bool is_concurrent = queue_family.size() > 1;
+
     vk::BufferCreateInfo buffer_info{
-        .size                  = size,
-        .usage                 = usage,
-        .sharingMode           = queue_family.size() > 1 ? vk::SharingMode::eConcurrent: vk::SharingMode::eExclusive,
-        .queueFamilyIndexCount = static_cast<uint32_t>(queue_family.size()),
-        .pQueueFamilyIndices   = queue_family.data(),
+        .size        = size,
+        .usage       = usage,
+        .sharingMode = is_concurrent ? vk::SharingMode::eConcurrent
+                                     : vk::SharingMode::eExclusive,
+        .queueFamilyIndexCount =
+            is_concurrent ? static_cast<uint32_t>(queue_family.size()) : 0,
+        .pQueueFamilyIndices = is_concurrent ? queue_family.data() : nullptr,
     };
 
     vk::Buffer             buffer = ctx.m_device.createBuffer(buffer_info);
@@ -84,34 +89,11 @@ void copy_buffer(
     vk::Buffer&    dst_buffer,
     vk::DeviceSize size
 ) {
-    auto& commandPool = ctx.m_transfer_command_pool;
-
-    vk::CommandBufferAllocateInfo alloc_info{
-        .commandPool        = commandPool,
-        .level              = vk::CommandBufferLevel::ePrimary,
-        .commandBufferCount = 1,
-    };
-    vk::CommandBuffer temp_command_copy_buffer =
-        ctx.m_device.allocateCommandBuffers(alloc_info).front();
-    temp_command_copy_buffer.begin(
-        { .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit }
-    );
+    auto temp_command_copy_buffer = begin_single_time_commands(ctx);
     temp_command_copy_buffer.copyBuffer(
         src_buffer, dst_buffer, vk::BufferCopy(0, 0, size)
     );
-    temp_command_copy_buffer.end();
-
-    ctx.m_transfer_queue.submit(
-        vk::SubmitInfo{
-            .commandBufferCount = 1,
-            .pCommandBuffers    = &temp_command_copy_buffer,
-        },
-        nullptr
-    );
-
-    ctx.m_transfer_queue.waitIdle();
-
-    ctx.m_device.freeCommandBuffers(commandPool, temp_command_copy_buffer);
+    end_single_time_commands(ctx, temp_command_copy_buffer);
 }
 
 void create_uniform_buffer(VulkanContext& ctx) {
@@ -160,7 +142,7 @@ void update_uniform_buffer(VulkanContext& ctx) {
     );
     ubo.proj[1][1] *= -1; // flip y
 
-    // This is not that efficient. look into push constants 
+    // This is not that efficient. look into push constants
     memcpy(ctx.m_uniform_buffers_mapped[ctx.m_frame_index], &ubo, sizeof(ubo));
 }
 

@@ -53,7 +53,7 @@ target_sources(${TEMPLATE_NAME}
     src/core/swap-chain.cpp
     src/graphics/buffer.cpp
     src/graphics/pipeline.cpp
-    src/util/image-util.cpp
+    src/graphics/image.cpp
 )
 
 target_include_directories(${TEMPLATE_NAME}

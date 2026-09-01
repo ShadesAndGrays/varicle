@@ -39,7 +39,7 @@ void create_logical_device(VulkanContext& ctx) {
         vk::PhysicalDeviceVulkan11Features,
         vk::PhysicalDeviceVulkan13Features,
         vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>
-        feature_chain = { {},
+        feature_chain = { {.features = {.samplerAnisotropy = true}},
                           { .shaderDrawParameters = true },
                           { .synchronization2 = true,
                             .dynamicRendering = true },
@@ -134,6 +134,8 @@ bool is_device_suitable(vk::PhysicalDevice const& physical_device) {
         vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
 
     bool supports_required_features =
+        feature.template get<vk::PhysicalDeviceFeatures2>()
+            .features.samplerAnisotropy &&
         feature.template get<vk::PhysicalDeviceVulkan11Features>()
             .shaderDrawParameters &&
         feature.template get<vk::PhysicalDeviceVulkan13Features>()
