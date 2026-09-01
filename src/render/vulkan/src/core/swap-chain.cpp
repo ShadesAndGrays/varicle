@@ -147,9 +147,11 @@ void recreate_swap_chain(VulkanContext& ctx) {
     ctx.m_device.waitIdle();
 
     cleanup_swap_chain(ctx);
-
     create_swap_chain(ctx);
     create_image_views(ctx);
+
+    cleanup_depth_resources(ctx);
+    create_depth_resources(ctx);
 }
 
 } // namespace varicle::render::vulkan
