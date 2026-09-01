@@ -6,13 +6,15 @@
 namespace varicle::render::vulkan {
 void transition_image_layout(
     VulkanContext&          ctx,
-    uint32_t                imageIndex,
+    vk::Image               image,
     vk::ImageLayout         old_layout,
     vk::ImageLayout         new_layout,
     vk::AccessFlags2        src_access_mask,
     vk::AccessFlags2        dst_access_mask,
     vk::PipelineStageFlags2 src_stage_mask,
-    vk::PipelineStageFlags2 dst_stage_mask
+    vk::PipelineStageFlags2 dst_stage_mask,
+    vk::ImageAspectFlags    image_aspect_flags
+
 );
 
 void transition_image_layout(
@@ -22,12 +24,13 @@ void transition_image_layout(
     vk::ImageLayout   new_layout
 );
 
-void create_texture_image(VulkanContext& ctx);
-void create_texture_image_view(VulkanContext& ctx);
+void          create_texture_image(VulkanContext& ctx);
+void          create_texture_image_view(VulkanContext& ctx);
 vk::ImageView create_image_view(
-    VulkanContext&   ctx,
-    vk::Image const& image,
-    vk::Format       format
+    VulkanContext&       ctx,
+    vk::Image const&     image,
+    vk::Format           format,
+    vk::ImageAspectFlags aspect_flag
 );
 
 std::pair<vk::Image, vk::DeviceMemory> create_image(
@@ -48,7 +51,7 @@ void copy_buffer_to_image(
     uint32_t          height
 );
 
-
 void create_texture_sampler(VulkanContext& ctx);
+void create_depth_resources(VulkanContext& ctx);
 
 } // namespace varicle::render::vulkan

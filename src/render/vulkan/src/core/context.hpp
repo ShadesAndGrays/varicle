@@ -19,14 +19,15 @@ struct QueueFamilyIndices {
 
 struct VulkanContext {
 
-    GLFWwindow*         m_window = nullptr;
-    QueueFamilyIndices  m_indices;
-    uint32_t            m_frame_index         = 0;
-    bool                m_framebuffer_resized = false;
-    uint32_t            m_image_index         = 0;
-    bool                m_recreating_frame    = false;
-    vk::ClearColorValue m_clear_color =
-        vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);
+    GLFWwindow*        m_window = nullptr;
+    QueueFamilyIndices m_indices;
+    uint32_t           m_frame_index         = 0;
+    bool               m_framebuffer_resized = false;
+    uint32_t           m_image_index         = 0;
+    bool               m_recreating_frame    = false;
+    vk::ClearValue m_clear_color = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);
+
+    vk::ClearValue m_clear_depth = vk::ClearDepthStencilValue(1.0f, 0);
 
     // Vulkan member variables
     vk::Instance               m_instance        = nullptr;
@@ -74,6 +75,11 @@ struct VulkanContext {
     vk::ImageView    m_texture_image_view   = nullptr;
     vk::Sampler      m_texture_sampler      = nullptr;
     vk::DeviceMemory m_texture_image_memory = nullptr;
+
+    vk::Image        m_depth_image = nullptr;
+    vk::ImageView    m_depth_image_view   = nullptr;
+    vk::DeviceMemory m_depth_image_memory = nullptr;
+    vk::Format       m_depth_format;
 
     // These are automatically cleaned up when the device is destroyed
     vk::Queue m_graphics_queue = nullptr; // for graphics and presenting

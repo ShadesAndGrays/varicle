@@ -122,7 +122,7 @@ void create_image_views(VulkanContext& ctx) {
 
     for (auto& image : ctx.m_swap_chain_images) {
         ctx.m_swap_chain_image_views.emplace_back(
-                create_image_view(ctx,image,ctx.m_swap_chain_surface_format.format)
+                create_image_view(ctx,image,ctx.m_swap_chain_surface_format.format,vk::ImageAspectFlagBits::eColor)
         );
     }
 }

@@ -49,7 +49,7 @@ void create_descriptor_set(VulkanContext& ctx) {
                   .dstArrayElement = 0,
                   .descriptorCount = 1,
                   .descriptorType  = vk::DescriptorType::eCombinedImageSampler,
-                  .pImageInfo     = &image_info } } };
+                  .pImageInfo      = &image_info } } };
 
         ctx.m_device.updateDescriptorSets(descriptor_write, {});
     }
@@ -120,41 +120,43 @@ create_shader_module(const VulkanContext& ctx, const std::vector<char>& code) {
     return shaderModule;
 }
 
+/* Programmable Function Stages
+ * Fixed Function Stages
+ */
 void create_graphics_pipeline(VulkanContext& ctx) {
 
     ctx.m_shader_module =
         create_shader_module(ctx, readFile("shaders/slang.spv"));
     vk::ShaderModule& shaderModule = ctx.m_shader_module;
 
-    // NOTE: What is the name of the types of pipeline?
-    vk::PipelineShaderStageCreateInfo vertShaderStageInfo{
+    vk::PipelineShaderStageCreateInfo vert_shader_stageInfo{
         .stage  = vk::ShaderStageFlagBits::eVertex,
         .module = shaderModule,
         .pName  = "vertMain"
 
     };
 
-    vk::PipelineShaderStageCreateInfo fragShaderStageInfo{
+    vk::PipelineShaderStageCreateInfo frag_shader_stageInfo{
         .stage  = vk::ShaderStageFlagBits::eFragment,
         .module = shaderModule,
         .pName  = "fragMain"
     };
 
-    vk::PipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo,
-                                                         fragShaderStageInfo };
+    vk::PipelineShaderStageCreateInfo shader_stages[] = { vert_shader_stageInfo,
+                                                         frag_shader_stageInfo };
 
-    auto bindingDescription    = Vertex::getBindingDescription();
-    auto attributeDescriptions = Vertex::getAttributeDescriptions();
+    auto binding_description    = Vertex::getBindingDescription();
+    auto attribute_descriptions = Vertex::getAttributeDescriptions();
 
-    vk::PipelineVertexInputStateCreateInfo vertexInputInfo{
+    vk::PipelineVertexInputStateCreateInfo vertex_inputInfo{
         .vertexBindingDescriptionCount = 1,
-        .pVertexBindingDescriptions    = &bindingDescription,
+        .pVertexBindingDescriptions    = &binding_description,
         .vertexAttributeDescriptionCount =
-            static_cast<uint32_t>(attributeDescriptions.size()),
-        .pVertexAttributeDescriptions = attributeDescriptions.data()
+            static_cast<uint32_t>(attribute_descriptions.size()),
+        .pVertexAttributeDescriptions = attribute_descriptions.data()
     };
 
-    vk::PipelineInputAssemblyStateCreateInfo inputAssembly{
+    vk::PipelineInputAssemblyStateCreateInfo input_assembly{
         .topology = vk::PrimitiveTopology::eTriangleList
     };
 
@@ -167,16 +169,24 @@ void create_graphics_pipeline(VulkanContext& ctx) {
 
     vk::Rect2D scissor{ vk::Offset2D{ 0, 0 }, ctx.m_swap_chain_extent };
 
-    std::vector<vk::DynamicState> dynamicStates = {
+    std::vector<vk::DynamicState> dynamic_states = {
         vk::DynamicState::eViewport, vk::DynamicState::eScissor
     };
-    vk::PipelineDynamicStateCreateInfo dynamicState{
-        .dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
-        .pDynamicStates    = dynamicStates.data()
+    vk::PipelineDynamicStateCreateInfo dynamic_state{
+        .dynamicStateCount = static_cast<uint32_t>(dynamic_states.size()),
+        .pDynamicStates    = dynamic_states.data()
     };
 
-    vk::PipelineViewportStateCreateInfo viewportState{ .viewportCount = 1,
+    vk::PipelineViewportStateCreateInfo viewport_state{ .viewportCount = 1,
                                                        .scissorCount  = 1 };
+
+    vk::PipelineDepthStencilStateCreateInfo depth_stencil{
+        .depthTestEnable       = vk::True,
+        .depthWriteEnable      = vk::True,
+        .depthCompareOp        = vk::CompareOp::eLess,
+        .depthBoundsTestEnable = vk::False,
+        .stencilTestEnable     = vk::False,
+    };
 
     vk::PipelineRasterizationStateCreateInfo rasterizer{
         .depthClampEnable        = vk::False,
@@ -195,7 +205,7 @@ void create_graphics_pipeline(VulkanContext& ctx) {
         .sampleShadingEnable  = vk::False
     };
 
-    vk::PipelineColorBlendAttachmentState colorBlendAttachment{
+    vk::PipelineColorBlendAttachmentState color_blend_attachment{
         .blendEnable = vk::False,
 
         .srcColorBlendFactor = vk::BlendFactor::eSrcAlpha,
@@ -211,11 +221,11 @@ void create_graphics_pipeline(VulkanContext& ctx) {
             vk::ColorComponentFlagBits::eA,
     };
 
-    vk::PipelineColorBlendStateCreateInfo colorBlending{
+    vk::PipelineColorBlendStateCreateInfo color_blending{
         .logicOpEnable   = vk::False,
         .logicOp         = vk::LogicOp::eCopy,
         .attachmentCount = 1,
-        .pAttachments    = &colorBlendAttachment
+        .pAttachments    = &color_blend_attachment
     };
 
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
@@ -228,30 +238,32 @@ void create_graphics_pipeline(VulkanContext& ctx) {
         ctx.m_device.createPipelineLayout(pipelineLayoutInfo)
     );
 
-    vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo{
+    vk::GraphicsPipelineCreateInfo graphics_pipeline_create_info{
+        .stageCount          = 2,
+        .pStages             = shader_stages,
+        .pVertexInputState   = &vertex_inputInfo,
+        .pInputAssemblyState = &input_assembly,
+        .pViewportState      = &viewport_state,
+        .pRasterizationState = &rasterizer,
+        .pMultisampleState   = &multisampling,
+        .pDepthStencilState  = &depth_stencil,
+        .pColorBlendState    = &color_blending,
+        .pDynamicState       = &dynamic_state,
+        .layout              = ctx.m_pipeline_layout,
+        .renderPass          = nullptr
+    };
+
+    vk::PipelineRenderingCreateInfo pipeline_rendering_create_info{
         .colorAttachmentCount    = 1,
-        .pColorAttachmentFormats = &ctx.m_swap_chain_surface_format.format
+        .pColorAttachmentFormats = &ctx.m_swap_chain_surface_format.format,
+        .depthAttachmentFormat = ctx.m_depth_format
     };
 
     vk::StructureChain<
         vk::GraphicsPipelineCreateInfo,
         vk::PipelineRenderingCreateInfo>
-        pipelineCreateInfoChain =
-
-            { { .stageCount          = 2,
-                .pStages             = shaderStages,
-                .pVertexInputState   = &vertexInputInfo,
-                .pInputAssemblyState = &inputAssembly,
-                .pViewportState      = &viewportState,
-                .pRasterizationState = &rasterizer,
-                .pMultisampleState   = &multisampling,
-                .pColorBlendState    = &colorBlending,
-                .pDynamicState       = &dynamicState,
-                .layout              = ctx.m_pipeline_layout,
-                .renderPass          = nullptr },
-              { .colorAttachmentCount = 1,
-                .pColorAttachmentFormats =
-                    &ctx.m_swap_chain_surface_format.format } };
+        pipelineCreateInfoChain = { graphics_pipeline_create_info,
+                                    pipeline_rendering_create_info };
 
     auto result = ctx.m_device.createGraphicsPipeline(
         nullptr, pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>()
