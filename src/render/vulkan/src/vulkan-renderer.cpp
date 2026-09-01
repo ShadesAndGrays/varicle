@@ -6,7 +6,7 @@
 #include "core/init.hpp"
 #include "core/swap-chain.hpp"
 #include "core/validation.hpp"
-#include "core/vertex.hpp"
+#include "model/model.hpp"
 #include "graphics/buffer.hpp"
 #include "graphics/image.hpp"
 #include "graphics/pipeline.hpp"
@@ -39,11 +39,12 @@ void VulkanRenderer ::init(
     create_command_pool(ctx);
     create_depth_resources(ctx);
     create_graphics_pipeline(ctx);
+    load_model(ctx);
     create_vertex_buffer(ctx);
+    create_index_buffer(ctx);
     create_texture_image(ctx);
     create_texture_image_view(ctx);
     create_texture_sampler(ctx);
-    create_index_buffer(ctx);
     create_uniform_buffer(ctx);
     create_descriptor_pool(ctx);
     create_descriptor_set(ctx);
@@ -238,7 +239,8 @@ void VulkanRenderer::begin_frame() {
     cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, ctx.m_graphics_pipeline);
 
     cmd.bindVertexBuffers(0, ctx.m_vertex_buffer, { 0 });
-    cmd.bindIndexBuffer(ctx.m_index_buffer, 0, vk::IndexType::eUint16);
+
+    cmd.bindIndexBuffer(ctx.m_index_buffer, 0, vk::IndexTypeValue<decltype(ctx.indices)::value_type>::value);
 
     cmd.setViewport(
         0,
@@ -260,7 +262,7 @@ void VulkanRenderer::begin_frame() {
         ctx.m_descriptor_sets[ctx.m_frame_index],
         nullptr
     );
-    cmd.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+    cmd.drawIndexed(static_cast<uint32_t>(ctx.indices.size()), 1, 0, 0, 0);
 
     update_uniform_buffer(ctx);
 }

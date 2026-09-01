@@ -148,7 +148,7 @@ void update_uniform_buffer(VulkanContext& ctx) {
 }
 
 void create_index_buffer(VulkanContext& ctx) {
-    vk::DeviceSize buffer_size = sizeof(indices[0]) * indices.size();
+    vk::DeviceSize buffer_size = sizeof(ctx.indices[0]) * ctx.indices.size();
 
     std::array<uint32_t, 2> qf = { ctx.m_indices.graphics_family.value(),
                                    ctx.m_indices.transfer_family.value() };
@@ -163,7 +163,7 @@ void create_index_buffer(VulkanContext& ctx) {
     );
 
     void* data = ctx.m_device.mapMemory(staging_buffer_memory, 0, buffer_size);
-    memcpy(data, indices.data(), static_cast<size_t>(buffer_size));
+    memcpy(data, ctx.indices.data(), static_cast<size_t>(buffer_size));
     ctx.m_device.unmapMemory(staging_buffer_memory);
     std::tie(ctx.m_index_buffer, ctx.m_index_buffer_memory) = create_buffer(
         ctx,
@@ -180,7 +180,7 @@ void create_index_buffer(VulkanContext& ctx) {
 }
 
 void create_vertex_buffer(VulkanContext& ctx) {
-    vk::DeviceSize          buffer_size = sizeof(vertices[0]) * vertices.size();
+    vk::DeviceSize          buffer_size = sizeof(ctx.vertices[0]) * ctx.vertices.size();
     std::array<uint32_t, 2> qf = { ctx.m_indices.graphics_family.value(),
                                    ctx.m_indices.transfer_family.value() };
 
@@ -193,7 +193,7 @@ void create_vertex_buffer(VulkanContext& ctx) {
         qf
     );
     void* data = ctx.m_device.mapMemory(staging_buffer_memory, 0, buffer_size);
-    memcpy(data, vertices.data(), buffer_size);
+    memcpy(data, ctx.vertices.data(), buffer_size);
     ctx.m_device.unmapMemory(staging_buffer_memory);
 
     std::tie(ctx.m_vertex_buffer, ctx.m_vertex_buffer_memory) = create_buffer(
@@ -210,51 +210,51 @@ void create_vertex_buffer(VulkanContext& ctx) {
     ctx.m_device.destroyBuffer(staging_buffer);
 }
 
-[[deprecated("Not scalable, create_vertex_buffer")]] void
-create_vertex_buffer_prev(VulkanContext& ctx) {
-    std::array<uint32_t, 2> qf = { ctx.m_indices.graphics_family.value(),
-                                   ctx.m_indices.transfer_family.value() };
-
-    vk::BufferCreateInfo buffer_info{
-        .size  = sizeof(vertices[0]) * vertices.size(),
-        .usage = vk::BufferUsageFlagBits::eVertexBuffer,
-        // setting this to eConcurrent so the buffer can be transfered between
-        // gpu. It's less efficient than exclusive but for not it's fine
-        .sharingMode =
-            vk::SharingMode::eConcurrent, // or vk::SharingMode::eExclusive
-        .queueFamilyIndexCount = qf.size(),
-        .pQueueFamilyIndices   = qf.data(),
-    };
-    ctx.m_vertex_buffer = ctx.m_device.createBuffer(buffer_info);
-
-    vk::MemoryRequirements mem_requirements =
-        ctx.m_device.getBufferMemoryRequirements(ctx.m_vertex_buffer);
-
-    /* Allocates memory for the buffer with requested size.
-     * Host Visible: I want to CPU to be able to map too it
-     * Host Coherent: Send now. Do not wait for flush
-     */
-    vk::MemoryAllocateInfo memoryAllocateInfo{
-        .allocationSize  = mem_requirements.size,
-        .memoryTypeIndex = find_memory_type(
-            ctx,
-            mem_requirements.memoryTypeBits,
-            vk::MemoryPropertyFlagBits::eHostVisible |
-                vk::MemoryPropertyFlagBits::eHostCoherent
-        )
-    };
-
-    ctx.m_vertex_buffer_memory =
-        ctx.m_device.allocateMemory(memoryAllocateInfo);
-    ctx.m_device.bindBufferMemory(
-        ctx.m_vertex_buffer, ctx.m_vertex_buffer_memory, 0
-    );
-
-    void* data =
-        ctx.m_device.mapMemory(ctx.m_vertex_buffer_memory, 0, buffer_info.size);
-    memcpy(data, vertices.data(), buffer_info.size);
-    ctx.m_device.unmapMemory(ctx.m_vertex_buffer_memory);
-}
+// [[deprecated("Not scalable, create_vertex_buffer")]] void
+// create_vertex_buffer_prev(VulkanContext& ctx) {
+//     std::array<uint32_t, 2> qf = { ctx.m_indices.graphics_family.value(),
+//                                    ctx.m_indices.transfer_family.value() };
+//
+//     vk::BufferCreateInfo buffer_info{
+//         .size  = sizeof(vertices[0]) * vertices.size(),
+//         .usage = vk::BufferUsageFlagBits::eVertexBuffer,
+//         // setting this to eConcurrent so the buffer can be transfered between
+//         // gpu. It's less efficient than exclusive but for not it's fine
+//         .sharingMode =
+//             vk::SharingMode::eConcurrent, // or vk::SharingMode::eExclusive
+//         .queueFamilyIndexCount = qf.size(),
+//         .pQueueFamilyIndices   = qf.data(),
+//     };
+//     ctx.m_vertex_buffer = ctx.m_device.createBuffer(buffer_info);
+//
+//     vk::MemoryRequirements mem_requirements =
+//         ctx.m_device.getBufferMemoryRequirements(ctx.m_vertex_buffer);
+//
+//     /* Allocates memory for the buffer with requested size.
+//      * Host Visible: I want to CPU to be able to map too it
+//      * Host Coherent: Send now. Do not wait for flush
+//      */
+//     vk::MemoryAllocateInfo memoryAllocateInfo{
+//         .allocationSize  = mem_requirements.size,
+//         .memoryTypeIndex = find_memory_type(
+//             ctx,
+//             mem_requirements.memoryTypeBits,
+//             vk::MemoryPropertyFlagBits::eHostVisible |
+//                 vk::MemoryPropertyFlagBits::eHostCoherent
+//         )
+//     };
+//
+//     ctx.m_vertex_buffer_memory =
+//         ctx.m_device.allocateMemory(memoryAllocateInfo);
+//     ctx.m_device.bindBufferMemory(
+//         ctx.m_vertex_buffer, ctx.m_vertex_buffer_memory, 0
+//     );
+//
+//     void* data =
+//         ctx.m_device.mapMemory(ctx.m_vertex_buffer_memory, 0, buffer_info.size);
+//     memcpy(data, vertices.data(), buffer_info.size);
+//     ctx.m_device.unmapMemory(ctx.m_vertex_buffer_memory);
+// }
 
 void create_command_buffers(VulkanContext& ctx) {
     vk::CommandBufferAllocateInfo allocInfo{

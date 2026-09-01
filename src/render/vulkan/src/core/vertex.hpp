@@ -1,6 +1,12 @@
 #pragma once
-#include "glm/glm.hpp"
 #include <vulkan/vulkan.hpp>
+#ifndef GLM_ENABLE_EXPERIMENTAL
+#define GLM_ENABLE_EXPERIMENTAL
+#endif
+
+#include <glm/gtx/hash.hpp>
+
+namespace varicle::render::vulkan {
 
 struct Vertex {
     glm::vec3 pos;
@@ -30,6 +36,12 @@ struct Vertex {
               .offset   = offsetof(Vertex, tex_coord) },
         } };
     }
+
+    bool operator==(const Vertex& other) const {
+        return pos == other.pos && color == other.color  && tex_coord ==
+        other.tex_coord;
+
+    }
 };
 
 struct UniformBufferObject {
@@ -43,17 +55,29 @@ struct UniformBufferObject {
     alignas(16) glm::mat4 proj;
 };
 
-const std::vector<Vertex> vertices{
-    { { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
-    { { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
-    { { 0.5f, 0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-    { { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+// const std::vector<Vertex> vertices{
+//     { { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+//     { { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+//     { { 0.5f, 0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+//     { { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+//
+//     { { -0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+//     { { 0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+//     { { 0.5f, 0.5f, -0.5f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+//     { { -0.5f, 0.5f, -0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+// };
+//
+// const std::vector<uint16_t> indices = {
+//     0, 1, 2, 2, 3, 0 ,4 , 5 ,6  , 6 ,7 , 4};
+} // namespace varicle::render::vulkan
 
-    { { -0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
-    { { 0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
-    { { 0.5f, 0.5f, -0.5f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-    { { -0.5f, 0.5f, -0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+namespace std {
+template <> struct hash<varicle::render::vulkan::Vertex> {
+    size_t operator()(varicle::render::vulkan::Vertex const& vertex) const {
+        return ((hash<glm::vec3>()(vertex.pos) ^
+                 (hash<glm::vec3>()(vertex.color) << 1)) >>
+                1) ^
+            (hash<glm::vec2>()(vertex.tex_coord) << 1);
+    }
 };
-
-const std::vector<uint16_t> indices = {
-    0, 1, 2, 2, 3, 0 ,4 , 5 ,6  , 6 ,7 , 4};
+} // namespace std
