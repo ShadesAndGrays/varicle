@@ -53,5 +53,6 @@ void copy_buffer_to_image(
 
 void create_texture_sampler(VulkanContext& ctx);
 void create_depth_resources(VulkanContext& ctx);
+void cleanup_depth_resources(VulkanContext& ctx);
 
 } // namespace varicle::render::vulkan

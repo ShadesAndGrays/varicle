@@ -10,7 +10,7 @@ namespace varicle::render::vulkan {
 
 void transition_image_layout(
     VulkanContext&          ctx,
-    vk::Image                image,
+    vk::Image               image,
     vk::ImageLayout         old_layout,
     vk::ImageLayout         new_layout,
     vk::AccessFlags2        src_access_mask,
@@ -251,8 +251,12 @@ vk::ImageView create_image_view(
 
 void create_texture_image_view(VulkanContext& ctx) {
 
-    ctx.m_texture_image_view =
-        create_image_view(ctx, ctx.m_texture_image, vk::Format::eR8G8B8A8Srgb,vk::ImageAspectFlagBits::eColor);
+    ctx.m_texture_image_view = create_image_view(
+        ctx,
+        ctx.m_texture_image,
+        vk::Format::eR8G8B8A8Srgb,
+        vk::ImageAspectFlagBits::eColor
+    );
 }
 
 void create_texture_sampler(VulkanContext& ctx) {
@@ -303,6 +307,21 @@ vk::Format find_depth_format(VulkanContext& ctx) {
         vk::ImageTiling::eOptimal,
         vk::FormatFeatureFlagBits::eDepthStencilAttachment
     );
+}
+
+void cleanup_depth_resources(VulkanContext& ctx) {
+    if (ctx.m_depth_image_memory) {
+        ctx.m_device.freeMemory(ctx.m_depth_image_memory);
+        ctx.m_depth_image_memory = nullptr;
+    }
+    if (ctx.m_depth_image) {
+        ctx.m_device.destroyImage(ctx.m_depth_image);
+        ctx.m_depth_image = nullptr;
+    }
+    if (ctx.m_depth_image_view) {
+        ctx.m_device.destroyImageView(ctx.m_depth_image_view);
+        ctx.m_depth_image_view = nullptr;
+    }
 }
 
 void create_depth_resources(VulkanContext& ctx) {
