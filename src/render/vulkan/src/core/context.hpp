@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vertex.hpp"
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
@@ -59,11 +60,13 @@ struct VulkanContext {
     std::vector<vk::Semaphore> m_render_finished_semaphores;
     std::vector<vk::Fence>     m_in_flight_fences;
 
-    vk::Buffer       m_vertex_buffer        = nullptr; // interface for memory
-    vk::DeviceMemory m_vertex_buffer_memory = nullptr; // actually memory
-                                                       //
-    vk::Buffer       m_index_buffer        = nullptr;  // interface for memory
-    vk::DeviceMemory m_index_buffer_memory = nullptr;  // actually memory
+    std::vector<Vertex> vertices;
+    vk::Buffer          m_vertex_buffer = nullptr; // interface for memory
+    vk::DeviceMemory    m_vertex_buffer_memory = nullptr; // actually memory
+                                                          //
+    std::vector<uint32_t> indices;
+    vk::Buffer            m_index_buffer = nullptr; // interface for memory
+    vk::DeviceMemory      m_index_buffer_memory = nullptr; // actually memory
 
     std::vector<vk::Buffer>       m_uniform_buffers;
     std::vector<vk::DeviceMemory> m_uniform_buffers_memory;
@@ -76,7 +79,7 @@ struct VulkanContext {
     vk::Sampler      m_texture_sampler      = nullptr;
     vk::DeviceMemory m_texture_image_memory = nullptr;
 
-    vk::Image        m_depth_image = nullptr;
+    vk::Image        m_depth_image        = nullptr;
     vk::ImageView    m_depth_image_view   = nullptr;
     vk::DeviceMemory m_depth_image_memory = nullptr;
     vk::Format       m_depth_format;

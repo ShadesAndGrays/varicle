@@ -54,6 +54,7 @@ target_sources(${TEMPLATE_NAME}
     src/graphics/buffer.cpp
     src/graphics/pipeline.cpp
     src/graphics/image.cpp
+    src/model/model.cpp
 )
 
 target_include_directories(${TEMPLATE_NAME}
@@ -64,7 +65,7 @@ target_include_directories(${TEMPLATE_NAME}
 
 set_target_properties (${TEMPLATE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEMPLATE_DIR})
 set_target_properties (${TEMPLATE_NAME} PROPERTIES CXX_STANDARD 23)
-target_link_libraries (${TEMPLATE_NAME} Varicle::Vulkan glfw)
+target_link_libraries (${TEMPLATE_NAME} Varicle::Vulkan glfw tinyobjloader::tinyobjloader)
 target_include_directories (${TEMPLATE_NAME} PRIVATE ${STB_INCLUDEDIR})
 
 # Define VULKAN_HPP_HANDLE_ERROR_OUT_OF_DATE_AS_SUCCESS to treat VK_ERROR_OUT_OF_DATE_KHR as a success code

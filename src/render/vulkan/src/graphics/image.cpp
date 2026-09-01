@@ -1,6 +1,7 @@
 #include "image.hpp"
 #include "buffer.hpp"
 #include "core/context.hpp"
+#include "model/model.hpp"
 #include "util/command.hpp"
 #include <vulkan/vulkan.hpp>
 #define STB_IMAGE_IMPLEMENTATION
@@ -92,7 +93,7 @@ void create_texture_image(VulkanContext& ctx) {
     int texture_width, texture_height, texture_channels;
 
     stbi_uc* pixels = stbi_load(
-        "textures/texture.png",
+        TEXTURE_PATH.c_str(),
         &texture_width,
         &texture_height,
         &texture_channels,
