@@ -74,6 +74,7 @@ struct VulkanContext {
 
     // I assume this should be would be from a
     // pool of memory in our custom allocator
+    uint32_t         m_mip_levels            = 0;
     vk::Image        m_texture_image        = nullptr;
     vk::ImageView    m_texture_image_view   = nullptr;
     vk::Sampler      m_texture_sampler      = nullptr;
