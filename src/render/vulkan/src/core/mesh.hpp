@@ -4,6 +4,7 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
+namespace varicle::render::vulkan {
 struct Mesh {
     std::vector<Vertex>   vertices;
     std::vector<uint32_t> indices;
@@ -14,3 +15,4 @@ struct Mesh {
     vk::Buffer       index_buffer        = nullptr;
     vk::DeviceMemory index_buffer_memory = nullptr;
 };
+} // namespace varicle::render::vulkan

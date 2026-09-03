@@ -21,7 +21,8 @@ void transition_image_layout(
     vk::CommandBuffer command_buffer,
     vk::Image         image,
     vk::ImageLayout   old_layout,
-    vk::ImageLayout   new_layout
+    vk::ImageLayout   new_layout,
+    uint32_t          mip_levels
 );
 
 void          create_texture_image(VulkanContext& ctx);
@@ -30,13 +31,15 @@ vk::ImageView create_image_view(
     VulkanContext&       ctx,
     vk::Image const&     image,
     vk::Format           format,
-    vk::ImageAspectFlags aspect_flag
+    vk::ImageAspectFlags aspect_flag,
+    uint32_t                mip_levels
 );
 
 std::pair<vk::Image, vk::DeviceMemory> create_image(
     VulkanContext&          ctx,
     uint32_t                width,
     uint32_t                height,
+    uint32_t                mip_levels,
     vk::Format              format,
     vk::ImageTiling         tiling,
     vk::ImageUsageFlags     usage,
