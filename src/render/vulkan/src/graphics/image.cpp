@@ -49,6 +49,7 @@ std::pair<vk::Image, vk::DeviceMemory> create_image(
     uint32_t                width,
     uint32_t                height,
     uint32_t                mip_levels,
+    vk::SampleCountFlagBits num_samples,
     vk::Format              format,
     vk::ImageTiling         tiling,
     vk::ImageUsageFlags     usage,
@@ -60,7 +61,7 @@ std::pair<vk::Image, vk::DeviceMemory> create_image(
         .extent        = { width, height, 1 },
         .mipLevels     = mip_levels,
         .arrayLayers   = 1,
-        .samples       = vk::SampleCountFlagBits::e1,
+        .samples       = num_samples,
         .tiling        = tiling,
         .usage         = usage,
         .sharingMode   = vk::SharingMode::eExclusive,
@@ -265,6 +266,7 @@ void create_texture_image(VulkanContext& ctx) {
         texture_width,
         texture_height,
         ctx.m_mip_levels,
+        vk::SampleCountFlagBits::e1,
         vk::Format::eR8G8B8A8Srgb,
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eTransferSrc |
@@ -493,6 +495,7 @@ void create_depth_resources(VulkanContext& ctx) {
         ctx.m_swap_chain_extent.width,
         ctx.m_swap_chain_extent.height,
         1,
+        ctx.m_msaa_samples,
         depth_format,
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eDepthStencilAttachment,
@@ -503,6 +506,42 @@ void create_depth_resources(VulkanContext& ctx) {
         ctx, ctx.m_depth_image, depth_format, vk::ImageAspectFlagBits::eDepth, 1
     );
     ctx.m_depth_format = depth_format;
+}
+
+
+void cleanup_color_resources(VulkanContext& ctx) {
+    if (ctx.m_color_image_memory) {
+        ctx.m_device.freeMemory(ctx.m_color_image_memory);
+        ctx.m_color_image_memory = nullptr;
+    }
+    if (ctx.m_color_image) {
+        ctx.m_device.destroyImage(ctx.m_color_image);
+        ctx.m_color_image = nullptr;
+    }
+    if (ctx.m_color_image_view) {
+        ctx.m_device.destroyImageView(ctx.m_color_image_view);
+        ctx.m_color_image_view = nullptr;
+    }
+}
+
+void create_color_resources(VulkanContext& ctx) {
+    vk::Format color_format = ctx.m_swap_chain_surface_format.format;
+
+    std::tie(ctx.m_color_image, ctx.m_color_image_memory) = create_image(
+        ctx,
+        ctx.m_swap_chain_extent.width,
+        ctx.m_swap_chain_extent.height,
+        1,
+        ctx.m_msaa_samples,
+        color_format,
+        vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eTransientAttachment,
+        vk::MemoryPropertyFlagBits::eDeviceLocal
+    );
+
+    ctx.m_color_image_view = create_image_view(
+        ctx, ctx.m_color_image, color_format, vk::ImageAspectFlagBits::eColor, 1
+    );
 }
 
 } // namespace varicle::render::vulkan

@@ -32,7 +32,7 @@ vk::ImageView create_image_view(
     vk::Image const&     image,
     vk::Format           format,
     vk::ImageAspectFlags aspect_flag,
-    uint32_t                mip_levels
+    uint32_t             mip_levels
 );
 
 std::pair<vk::Image, vk::DeviceMemory> create_image(
@@ -40,6 +40,7 @@ std::pair<vk::Image, vk::DeviceMemory> create_image(
     uint32_t                width,
     uint32_t                height,
     uint32_t                mip_levels,
+    vk::SampleCountFlagBits num_samples,
     vk::Format              format,
     vk::ImageTiling         tiling,
     vk::ImageUsageFlags     usage,
@@ -57,5 +58,8 @@ void copy_buffer_to_image(
 void create_texture_sampler(VulkanContext& ctx);
 void create_depth_resources(VulkanContext& ctx);
 void cleanup_depth_resources(VulkanContext& ctx);
+
+void create_color_resources(VulkanContext& ctx);
+void cleanup_color_resources(VulkanContext& ctx);
 
 } // namespace varicle::render::vulkan
