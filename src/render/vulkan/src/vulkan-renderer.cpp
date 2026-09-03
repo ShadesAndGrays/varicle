@@ -132,7 +132,7 @@ void VulkanRenderer::shutdown() {
         delete impl;
 }
 
-void VulkanRenderer::clear_color(Color background) {
+void VulkanRenderer::set_clear_color(Color background) {
     auto& ctx         = impl->v_context;
     ctx.m_clear_color = vk::ClearColorValue(
         background.r, background.g, background.b, background.a
@@ -141,7 +141,7 @@ void VulkanRenderer::clear_color(Color background) {
     ctx.m_clear_depth = vk::ClearDepthStencilValue(1.0f, 0);
 }
 
-void VulkanRenderer::begin_frame() {
+void VulkanRenderer::begin_frame(bool clear_screen) {
     auto& ctx              = impl->v_context;
     ctx.m_recreating_frame = false;
 
@@ -231,7 +231,7 @@ void VulkanRenderer::begin_frame() {
         .resolveMode        = vk::ResolveModeFlagBits::eAverage,
         .resolveImageView   = ctx.m_swap_chain_image_views[image_index],
         .resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-        .loadOp             = vk::AttachmentLoadOp::eClear,
+        .loadOp             = clear_screen ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad,
         .storeOp            = vk::AttachmentStoreOp::eStore,
         .clearValue         = ctx.m_clear_color
     };

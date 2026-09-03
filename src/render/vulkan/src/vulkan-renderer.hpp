@@ -15,26 +15,26 @@ class VulkanRenderer : public IRender {
 
     void shutdown() override;
 
-    void begin_frame() override;
-    void clear_color(Color background) override;
+    void begin_frame(bool clear_screen = true) override;
+    void set_clear_color(Color background) override;
 
     void end_frame() override;
 
-    void draw_circle(float x, float y, float radius, Color color) override {
-        // TODO: Implement this pure virtual method.
-        // static_assert(false, "Method `draw_circle` is not implemented.");
+    void resieze(uint32_t width, uint32_t height) override {}
+
+    TextureHandle create_texture(const char* filepath) override {
+        return INVALID_TEXTURE;
     }
 
-    void draw_rect(
-        float x,
-        float y,
-        float widht,
-        float height,
-        Color color
-    ) override {
-        // TODO: Implement this pure virtual method.
-        // static_assert(false, "Method `draw_rect` is not implemented.");
-    }
+    void destroy_texture(TextureHandle texture) override {}
+
+    void draw_rect(const Rect& rect, const Color& color) override {}
+
+    void draw_texured_rect(
+        const Rect&   rect,
+        TextureHandle texture,
+        const Color&  tint = { 1, 1, 1, 1 }
+    ) override {}
 
   private:
     struct Impl;
