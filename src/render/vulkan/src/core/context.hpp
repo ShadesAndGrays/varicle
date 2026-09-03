@@ -85,6 +85,12 @@ struct VulkanContext {
     vk::DeviceMemory m_depth_image_memory = nullptr;
     vk::Format       m_depth_format;
 
+    // for msaa
+    vk::Image        m_color_image        = nullptr;
+    vk::ImageView    m_color_image_view   = nullptr;
+    vk::DeviceMemory m_color_image_memory = nullptr;
+
+
     // These are automatically cleaned up when the device is destroyed
     vk::Queue m_graphics_queue = nullptr; // for graphics and presenting
     vk::Queue m_present_queue =
@@ -92,6 +98,8 @@ struct VulkanContext {
     vk::Queue m_transfer_queue = nullptr; // for transfer only
 
     vk::detail::DynamicLoader m_dl;
+
+    vk::SampleCountFlagBits m_msaa_samples = vk::SampleCountFlagBits::e1;
 };
 
 } // namespace varicle::render::vulkan

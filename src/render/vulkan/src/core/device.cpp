@@ -7,6 +7,37 @@
 
 namespace varicle::render::vulkan {
 
+vk::SampleCountFlagBits get_max_usable_sample_count(VulkanContext& ctx) {
+
+    vk::PhysicalDeviceProperties physical_device_properties =
+        ctx.m_physical_device.getProperties();
+
+    vk::SampleCountFlags counts =
+        physical_device_properties.limits.framebufferColorSampleCounts &
+        physical_device_properties.limits.framebufferDepthSampleCounts;
+
+    if (counts & vk::SampleCountFlagBits::e64) {
+        return vk::SampleCountFlagBits::e64;
+    }
+    if (counts & vk::SampleCountFlagBits::e32) {
+        return vk::SampleCountFlagBits::e32;
+    }
+    if (counts & vk::SampleCountFlagBits::e16) {
+        return vk::SampleCountFlagBits::e16;
+    }
+    if (counts & vk::SampleCountFlagBits::e8) {
+        return vk::SampleCountFlagBits::e8;
+    }
+    if (counts & vk::SampleCountFlagBits::e4) {
+        return vk::SampleCountFlagBits::e4;
+    }
+    if (counts & vk::SampleCountFlagBits::e2) {
+        return vk::SampleCountFlagBits::e2;
+    }
+
+    return vk::SampleCountFlagBits::e1;
+}
+
 void select_physical_device(VulkanContext& ctx) {
 
     auto physical_devices = ctx.m_instance.enumeratePhysicalDevices();
@@ -23,6 +54,7 @@ void select_physical_device(VulkanContext& ctx) {
     }
 
     ctx.m_physical_device = *dev_iter;
+    ctx.m_msaa_samples    = get_max_usable_sample_count(ctx);
 }
 void create_logical_device(VulkanContext& ctx) {
 
@@ -39,7 +71,8 @@ void create_logical_device(VulkanContext& ctx) {
         vk::PhysicalDeviceVulkan11Features,
         vk::PhysicalDeviceVulkan13Features,
         vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>
-        feature_chain = { {.features = {.samplerAnisotropy = true}},
+        feature_chain = { { .features = { .sampleRateShading = vk::True,
+                                          .samplerAnisotropy = true } },
                           { .shaderDrawParameters = true },
                           { .synchronization2 = true,
                             .dynamicRendering = true },

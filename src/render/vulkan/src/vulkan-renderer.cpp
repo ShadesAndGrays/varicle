@@ -6,10 +6,10 @@
 #include "core/init.hpp"
 #include "core/swap-chain.hpp"
 #include "core/validation.hpp"
-#include "model/model.hpp"
 #include "graphics/buffer.hpp"
 #include "graphics/image.hpp"
 #include "graphics/pipeline.hpp"
+#include "model/model.hpp"
 
 #include <print>
 
@@ -37,6 +37,7 @@ void VulkanRenderer ::init(
     create_image_views(ctx);
     create_descriptor_set_layout(ctx);
     create_command_pool(ctx);
+    create_color_resources(ctx);
     create_depth_resources(ctx);
     create_graphics_pipeline(ctx);
     load_model(ctx);
@@ -184,6 +185,18 @@ void VulkanRenderer::begin_frame() {
     vk::CommandBufferBeginInfo begin_info{};
     result = cmd.begin(&begin_info);
 
+    transition_image_layout(
+        ctx,
+        ctx.m_color_image,
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eColorAttachmentOptimal,
+        vk::AccessFlagBits2::eColorAttachmentWrite,
+        vk::AccessFlagBits2::eColorAttachmentWrite,
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        vk::ImageAspectFlagBits::eColor
+    );
+
     // Transition swap chain image to optimal layout for rendering
     transition_image_layout(
         ctx,
@@ -205,19 +218,31 @@ void VulkanRenderer::begin_frame() {
         vk::ImageLayout::eDepthAttachmentOptimal,
         vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
         vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
-        vk::PipelineStageFlagBits2::eEarlyFragmentTests |  vk::PipelineStageFlagBits2::eLateFragmentTests,
-        vk::PipelineStageFlagBits2::eEarlyFragmentTests |  vk::PipelineStageFlagBits2::eLateFragmentTests,
+        vk::PipelineStageFlagBits2::eEarlyFragmentTests |
+            vk::PipelineStageFlagBits2::eLateFragmentTests,
+        vk::PipelineStageFlagBits2::eEarlyFragmentTests |
+            vk::PipelineStageFlagBits2::eLateFragmentTests,
         vk::ImageAspectFlagBits::eDepth
     );
 
-
     vk::RenderingAttachmentInfo clear_attachment_info = {
-        .imageView   = ctx.m_swap_chain_image_views[image_index],
-        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-        .loadOp      = vk::AttachmentLoadOp::eClear,
-        .storeOp     = vk::AttachmentStoreOp::eStore,
-        .clearValue  = ctx.m_clear_color
+        .imageView          = ctx.m_color_image_view,
+        .imageLayout        = vk::ImageLayout::eColorAttachmentOptimal,
+        .resolveMode        = vk::ResolveModeFlagBits::eAverage,
+        .resolveImageView   = ctx.m_swap_chain_image_views[image_index],
+        .resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+        .loadOp             = vk::AttachmentLoadOp::eClear,
+        .storeOp            = vk::AttachmentStoreOp::eStore,
+        .clearValue         = ctx.m_clear_color
     };
+    // vk::RenderingAttachmentInfo clear_attachment_info = {
+    //     .imageView   = ctx.m_swap_chain_image_views[image_index],
+    //     .imageView   = ctx.m_color_image_view,
+    //     .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+    //     .loadOp      = vk::AttachmentLoadOp::eClear,
+    //     .storeOp     = vk::AttachmentStoreOp::eStore,
+    //     .clearValue  = ctx.m_clear_color
+    // };
 
     vk::RenderingAttachmentInfo depth_attachment_Info = {
         .imageView   = ctx.m_depth_image_view,
@@ -240,7 +265,11 @@ void VulkanRenderer::begin_frame() {
 
     cmd.bindVertexBuffers(0, ctx.m_vertex_buffer, { 0 });
 
-    cmd.bindIndexBuffer(ctx.m_index_buffer, 0, vk::IndexTypeValue<decltype(ctx.indices)::value_type>::value);
+    cmd.bindIndexBuffer(
+        ctx.m_index_buffer,
+        0,
+        vk::IndexTypeValue<decltype(ctx.indices)::value_type>::value
+    );
 
     cmd.setViewport(
         0,
@@ -287,10 +316,7 @@ void VulkanRenderer::end_frame() {
         vk::ImageAspectFlagBits::eColor
     );
 
-
-
     ctx.m_command_buffers[ctx.m_frame_index].end();
-
 
     vk::PipelineStageFlags waitDestinationStageMask(
         vk::PipelineStageFlagBits::eColorAttachmentOutput

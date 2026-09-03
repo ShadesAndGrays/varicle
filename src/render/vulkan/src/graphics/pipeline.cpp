@@ -201,8 +201,10 @@ void create_graphics_pipeline(VulkanContext& ctx) {
 
     // Anti-aliasing. Not enabled for now
     vk::PipelineMultisampleStateCreateInfo multisampling{
-        .rasterizationSamples = vk::SampleCountFlagBits::e1,
-        .sampleShadingEnable  = vk::False
+        .rasterizationSamples = ctx.m_msaa_samples,
+        .sampleShadingEnable  = vk::True,
+        .minSampleShading = 0.2f
+
     };
 
     vk::PipelineColorBlendAttachmentState color_blend_attachment{

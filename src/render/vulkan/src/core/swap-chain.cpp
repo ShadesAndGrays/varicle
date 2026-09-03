@@ -156,6 +156,10 @@ void recreate_swap_chain(VulkanContext& ctx) {
 
     cleanup_depth_resources(ctx);
     create_depth_resources(ctx);
+
+    cleanup_color_resources(ctx);
+    create_color_resources(ctx);
+
 }
 
 } // namespace varicle::render::vulkan
