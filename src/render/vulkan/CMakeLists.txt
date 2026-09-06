@@ -55,6 +55,7 @@ target_sources(${TEMPLATE_NAME}
     src/graphics/buffer.cpp
     src/graphics/pipeline.cpp
     src/graphics/resource-manager.cpp
+    ../common/common.cpp
  
 )
 

@@ -6,7 +6,7 @@
 
 namespace varicle::render::vulkan {
 
-void create_descriptor_set(VulkanContext& ctx,const Texture& texture) {
+void create_descriptor_set(VulkanContext& ctx, const Texture& texture) {
     std::vector<vk::DescriptorSetLayout> layouts(
         MAX_FRAMES_IN_FLIGHT, ctx.m_descriptor_set_layout
     );
@@ -192,7 +192,7 @@ void create_graphics_pipeline(VulkanContext& ctx) {
         .depthClampEnable        = vk::False,
         .rasterizerDiscardEnable = vk::False,
         .polygonMode             = vk::PolygonMode::eFill,
-        .cullMode                = vk::CullModeFlagBits::eBack,
+        .cullMode                = vk::CullModeFlagBits::eNone,
         // .frontFace               = vk::FrontFace::eClockwise,
         .frontFace       = vk::FrontFace::eCounterClockwise,
         .depthBiasEnable = vk::False,
@@ -230,10 +230,18 @@ void create_graphics_pipeline(VulkanContext& ctx) {
         .pAttachments    = &color_blend_attachment
     };
 
+    vk::PushConstantRange push_constant_range{
+        .stageFlags = vk::ShaderStageFlagBits::eVertex,
+        .offset     = 0,
+        .size       = sizeof(glm::mat4)
+
+    };
+
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
         .setLayoutCount         = 1,
         .pSetLayouts            = &ctx.m_descriptor_set_layout,
-        .pushConstantRangeCount = 0
+        .pushConstantRangeCount = 1,
+        .pPushConstantRanges = &push_constant_range
     };
 
     ctx.m_pipeline_layout = vk::PipelineLayout(

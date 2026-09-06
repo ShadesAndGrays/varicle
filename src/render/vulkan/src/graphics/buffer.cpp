@@ -3,6 +3,7 @@
 #include "graphics/resource.hpp"
 #include "util/command.hpp"
 #include <chrono>
+#include <print>
 #include <span>
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE // Depth 0 - 1 rather than -1 to 1
 #include <glm/glm.hpp>
@@ -119,33 +120,31 @@ void create_uniform_buffer(VulkanContext& ctx) {
         ));
     }
 }
-void update_uniform_buffer(VulkanContext& ctx) {
+
+void update_uniform_buffer(VulkanContext& ctx, Object object,Camera camera) {
     static auto start_time   = std::chrono::high_resolution_clock::now();
     auto        current_time = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(
                      current_time - start_time
     )
                      .count();
-    UniformBufferObject ubo{};
-    ubo.model = glm::rotate(
-        glm::mat4(1.0f), time * glm::radians(10.0f), glm::vec3(0.0f, 0.0f, 1.0f)
+
+    glm::mat4 mvp = camera.get_projection_matix() * camera.get_view_matrix() *
+        object.get_model_matrix();
+
+
+    auto& cmd = ctx.get_current_command_buffer();
+    cmd.pushConstants(
+        ctx.m_pipeline_layout,
+        vk::ShaderStageFlagBits::eVertex,
+        0,
+        sizeof(glm::mat4),
+        &mvp
     );
-    ubo.view = glm::lookAt(
-        glm::vec3(2.0f, 2.0f, 2.0f),
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f, 0.0f, 1.0f)
-    );
-    ubo.proj = glm::perspective(
-        glm::radians(45.0f),
-        static_cast<float>(ctx.m_swap_chain_extent.width) /
-            static_cast<float>(ctx.m_swap_chain_extent.height),
-        0.1f,
-        10.0f
-    );
-    ubo.proj[1][1] *= -1; // flip y
 
     // This is not that efficient. look into push constants
-    memcpy(ctx.m_uniform_buffers_mapped[ctx.m_frame_index], &ubo, sizeof(ubo));
+    // memcpy(ctx.m_uniform_buffers_mapped[ctx.m_frame_index], &ubo,
+    // sizeof(ubo));
 }
 
 void create_index_buffer(VulkanContext& ctx, Mesh& mesh) {
@@ -168,9 +167,8 @@ void create_index_buffer(VulkanContext& ctx, Mesh& mesh) {
         qf
     );
 
-    void* data = ctx.m_device.mapMemory(staging_buffer_memory, 0,
-    buffer_size); memcpy(data, mesh.m_indices.data(),
-    static_cast<size_t>(buffer_size));
+    void* data = ctx.m_device.mapMemory(staging_buffer_memory, 0, buffer_size);
+    memcpy(data, mesh.m_indices.data(), static_cast<size_t>(buffer_size));
     ctx.m_device.unmapMemory(staging_buffer_memory);
 
     std::tie(mesh.m_index_buffer, mesh.m_index_buffer_memory) = create_buffer(
@@ -186,7 +184,6 @@ void create_index_buffer(VulkanContext& ctx, Mesh& mesh) {
 
     ctx.m_device.freeMemory(staging_buffer_memory);
     ctx.m_device.destroyBuffer(staging_buffer);
-
 }
 
 void create_vertex_buffer(VulkanContext& ctx, Mesh& mesh) {

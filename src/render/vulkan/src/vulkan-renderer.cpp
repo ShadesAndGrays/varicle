@@ -72,8 +72,8 @@ void VulkanRenderer ::init(
         { 0, 1, 2, 2, 3, 0 }
     );
 
-    create_vertex_buffer(ctx,rectangle);
-    create_index_buffer(ctx,rectangle);
+    create_vertex_buffer(ctx, rectangle);
+    create_index_buffer(ctx, rectangle);
     RECTANGLE = resource_manager.add_mesh(ctx, std::move(rectangle));
     // std::println("mesh handle {}",Rectangle);
 }
@@ -417,11 +417,32 @@ void VulkanRenderer::draw_rect(const Rect& rect, const Color& color) {
     // cmd.
 }
 
-void VulkanRenderer::draw_mesh(MeshHandle mesh_handle) {
+void VulkanRenderer::draw_mesh(
+    glm::vec3      position,
+    glm::vec3      rotation,
+    glm::vec3      scale,
+    MeshHandle     mesh_handle,
+    TextureHandle  texture,
+    MaterialHandle material
+) {
+
     auto& ctx = impl->v_context;
 
     auto& mesh = resource_manager.get_mesh(ctx, mesh_handle);
     auto  cmd  = ctx.get_current_command_buffer();
+
+    update_uniform_buffer(
+        ctx,
+        Object{
+            .position = position,
+            .rotation = rotation,
+            .scale    = scale,
+            .mesh     = mesh_handle,
+            .texture  = texture,
+            .material = material,
+        },
+        camera
+    );
 
     cmd.bindVertexBuffers(0, mesh.m_vertex_buffer, { 0 });
 
@@ -438,10 +459,43 @@ void VulkanRenderer::draw_mesh(MeshHandle mesh_handle) {
         ctx.m_descriptor_sets[ctx.m_frame_index],
         nullptr
     );
-    cmd.drawIndexed(static_cast<uint32_t>(mesh.m_indices.size()), 1, 0, 0, 0);
 
-    update_uniform_buffer(ctx);
+    cmd.drawIndexed(static_cast<uint32_t>(mesh.m_indices.size()), 1, 0, 0, 0);
 }
+
+void VulkanRenderer::draw_mesh(MeshHandle mesh_handle) {
+    auto& ctx = impl->v_context;
+
+    auto& mesh = resource_manager.get_mesh(ctx, mesh_handle);
+    auto  cmd  = ctx.get_current_command_buffer();
+
+    // update_uniform_buffer(ctx);
+
+    cmd.bindVertexBuffers(0, mesh.m_vertex_buffer, { 0 });
+
+    cmd.bindIndexBuffer(
+        mesh.m_index_buffer,
+        0,
+        vk::IndexTypeValue<decltype(mesh.m_indices)::value_type>::value
+    );
+
+    cmd.bindDescriptorSets(
+        vk::PipelineBindPoint::eGraphics,
+        ctx.m_pipeline_layout,
+        0,
+        ctx.m_descriptor_sets[ctx.m_frame_index],
+        nullptr
+    );
+
+    cmd.drawIndexed(static_cast<uint32_t>(mesh.m_indices.size()), 1, 0, 0, 0);
+}
+
+void VulkanRenderer::set_camera(Camera camera) {
+    camera = camera;
+};
+Camera& VulkanRenderer::get_camera() {
+    return camera;
+};
 
 GLFWwindow* VulkanRenderer::get_window() {
     auto& ctx = impl->v_context;

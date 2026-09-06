@@ -31,8 +31,15 @@ class VulkanRenderer : public IRender {
     void          destroy_mesh(MeshHandle mesh) override;
 
     void draw_rect(const Rect& rect, const Color& color) override;
-
     void draw_mesh(MeshHandle mesh) override;
+    void draw_mesh(
+        glm::vec3      position,
+        glm::vec3      rotation,
+        glm::vec3      scale,
+        MeshHandle     mesh     = INVALID_MESH,
+        TextureHandle  texture  = INVALID_TEXTURE,
+        MaterialHandle material = INVALID_MATERIAL
+    ) override;
 
     void draw_v_cube();
 
@@ -42,10 +49,14 @@ class VulkanRenderer : public IRender {
         const Color&  tint = { 1, 1, 1, 1 }
     ) override {}
 
+    void    set_camera(Camera camera) override;
+    Camera& get_camera() override;
+
   private:
     struct Impl;
     ResourceManager resource_manager;
     Impl*           impl = nullptr;
+    Camera          camera;
 };
 
 } // namespace varicle::render::vulkan

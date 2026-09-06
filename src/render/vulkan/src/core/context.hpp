@@ -1,5 +1,7 @@
 #pragma once
 
+#include "common.hpp"
+#include "graphics/resource.hpp"
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
@@ -62,7 +64,7 @@ struct VulkanContext {
     // std::vector<Vertex> vertices;
     // vk::Buffer          m_vertex_buffer = nullptr; // interface for memory
     // vk::DeviceMemory    m_vertex_buffer_memory = nullptr; // actually memory
-                                                          //
+    //
     // std::vector<uint32_t> indices;
     // vk::Buffer            m_index_buffer = nullptr; // interface for memory
     // vk::DeviceMemory      m_index_buffer_memory = nullptr; // actually memory
@@ -77,7 +79,7 @@ struct VulkanContext {
     // vk::Image        m_texture_image        = nullptr;
     // vk::ImageView    m_texture_image_view   = nullptr;
     // vk::DeviceMemory m_texture_image_memory = nullptr;
-    vk::Sampler      m_texture_sampler      = nullptr;
+    vk::Sampler m_texture_sampler = nullptr;
 
     vk::Image        m_depth_image        = nullptr;
     vk::ImageView    m_depth_image_view   = nullptr;
@@ -99,7 +101,7 @@ struct VulkanContext {
 
     vk::SampleCountFlagBits m_msaa_samples = vk::SampleCountFlagBits::e1;
 
-    vk::CommandBuffer       get_current_command_buffer() {
+    vk::CommandBuffer& get_current_command_buffer() {
         return m_command_buffers[m_frame_index];
     }
 };
