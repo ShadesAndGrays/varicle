@@ -1,9 +1,12 @@
 #pragma once
 
 #include "core/context.hpp"
+#include "graphics/resource.hpp"
 #include <vulkan/vulkan.hpp>
 
 namespace varicle::render::vulkan {
+
+
 void transition_image_layout(
     VulkanContext&          ctx,
     vk::Image               image,
@@ -25,7 +28,6 @@ void transition_image_layout(
     uint32_t          mip_levels
 );
 
-void          create_texture_image(VulkanContext& ctx);
 void          create_texture_image_view(VulkanContext& ctx);
 vk::ImageView create_image_view(
     VulkanContext&       ctx,
@@ -54,6 +56,17 @@ void copy_buffer_to_image(
     uint32_t          width,
     uint32_t          height
 );
+
+void generate_mipmaps(
+    VulkanContext&     ctx,
+    vk::CommandBuffer& command_buffer,
+    vk::Image          image,
+    vk::Format         image_format,
+    int32_t            texture_width,
+    int32_t            texture_height,
+    uint32_t           mip_levels
+);
+
 
 void create_texture_sampler(VulkanContext& ctx);
 void create_depth_resources(VulkanContext& ctx);

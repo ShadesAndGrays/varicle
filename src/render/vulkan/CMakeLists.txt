@@ -16,13 +16,16 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 #   set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 # endif()
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static")
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
 
-find_package(glfw3 REQUIRED)
+# find_package(glfw3 REQUIRED)
 find_package(glm REQUIRED)
 find_package(Vulkan 1.4.335 REQUIRED)
-find_package(tinyobjloader REQUIRED)
-find_package(tinygltf REQUIRED)
+# find_package(tinyobjloader REQUIRED)
+# find_package(tinygltf REQUIRED)
 find_package(KTX REQUIRED)
 
 add_library(VaricleVulkan INTERFACE)
@@ -41,6 +44,12 @@ find_program(SLANGC_EXECUTABLE slangc HINTS $ENV{VULKAN_SDK}/bin REQUIRED)
 
 set(TEMPLATE_DIR ${CMAKE_BINARY_DIR}/${TEMPLATE_NAME})
 
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "" FORCE)
+add_subdirectory(../../../vendor/glfw ${CMAKE_CURRENT_BINARY_DIR}/vendor/glfw )
+
 add_executable (${TEMPLATE_NAME})
 
 target_sources(${TEMPLATE_NAME}
@@ -51,21 +60,24 @@ target_sources(${TEMPLATE_NAME}
     src/core/device.cpp
     src/core/validation.cpp
     src/core/swap-chain.cpp
+    src/graphics/image.cpp
     src/graphics/buffer.cpp
     src/graphics/pipeline.cpp
-    src/graphics/image.cpp
-    src/model/model.cpp
+    src/graphics/resource-manager.cpp
+    ../common/common.cpp
 )
 
 target_include_directories(${TEMPLATE_NAME}
     PUBLIC
     src
     ../common
+    ../../../vendor/tinygltf
+    ../../../vendor/tinyobjloader
 )
 
 set_target_properties (${TEMPLATE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEMPLATE_DIR})
 set_target_properties (${TEMPLATE_NAME} PROPERTIES CXX_STANDARD 23)
-target_link_libraries (${TEMPLATE_NAME} Varicle::Vulkan glfw tinyobjloader::tinyobjloader)
+target_link_libraries (${TEMPLATE_NAME} Varicle::Vulkan glfw )
 target_include_directories (${TEMPLATE_NAME} PRIVATE ${STB_INCLUDEDIR})
 
 # Define VULKAN_HPP_HANDLE_ERROR_OUT_OF_DATE_AS_SUCCESS to treat VK_ERROR_OUT_OF_DATE_KHR as a success code

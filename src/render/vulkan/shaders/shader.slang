@@ -1,3 +1,12 @@
+struct PushConstants {
+    float4x4 mvpMatrix;
+    // float4 colorTint;
+    // uint textureIndex;
+} 
+
+[[vk::push_constant]]
+PushConstants pc;
+
 struct VSInput {
     float3 inPosition;
     float3 inColor;
@@ -17,26 +26,27 @@ struct VSOutput {
     float2 fragTexCoord;
 };
 
-ConstantBuffer<UniformBuffer> ubo;
-Sampler2D texture;
+[[vk::binding(0)]] ConstantBuffer<UniformBuffer> ubo;
+[[vk::binding(1)]] Sampler2D texture;
 
 
 
 [shader("vertex")]
 VSOutput vertMain(VSInput input) {
     VSOutput output;
-    // This is a very hacky way to access the position
-    output.pos = 
-    mul(
-        ubo.proj,
-        mul (
-            ubo.view,
-            mul(
-                ubo.model,
-                float4(input.inPosition, 1.0)
-            )
-        )
-    );
+    // output.pos = 
+    // mul(
+    //     ubo.proj,
+    //     mul (
+    //         ubo.view,
+    //         mul(
+    //             ubo.model,
+    //             float4(input.inPosition, 1.0)
+    //         )
+    //     )
+    // );
+    // output.pos = mul(pc.mvpMatrix, float4(input.inPosition,1.0f));
+    output.pos = mul(pc.mvpMatrix, float4(input.inPosition,1.0f));
     output.color = input.inColor;
     output.fragTexCoord = input.inTexCoord;
     return output;

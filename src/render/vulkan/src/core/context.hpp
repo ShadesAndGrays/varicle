@@ -1,6 +1,7 @@
 #pragma once
 
-#include "vertex.hpp"
+#include "common.hpp"
+#include "graphics/resource.hpp"
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
@@ -60,13 +61,13 @@ struct VulkanContext {
     std::vector<vk::Semaphore> m_render_finished_semaphores;
     std::vector<vk::Fence>     m_in_flight_fences;
 
-    std::vector<Vertex> vertices;
-    vk::Buffer          m_vertex_buffer = nullptr; // interface for memory
-    vk::DeviceMemory    m_vertex_buffer_memory = nullptr; // actually memory
-                                                          //
-    std::vector<uint32_t> indices;
-    vk::Buffer            m_index_buffer = nullptr; // interface for memory
-    vk::DeviceMemory      m_index_buffer_memory = nullptr; // actually memory
+    // std::vector<Vertex> vertices;
+    // vk::Buffer          m_vertex_buffer = nullptr; // interface for memory
+    // vk::DeviceMemory    m_vertex_buffer_memory = nullptr; // actually memory
+    //
+    // std::vector<uint32_t> indices;
+    // vk::Buffer            m_index_buffer = nullptr; // interface for memory
+    // vk::DeviceMemory      m_index_buffer_memory = nullptr; // actually memory
 
     std::vector<vk::Buffer>       m_uniform_buffers;
     std::vector<vk::DeviceMemory> m_uniform_buffers_memory;
@@ -74,11 +75,11 @@ struct VulkanContext {
 
     // I assume this should be would be from a
     // pool of memory in our custom allocator
-    uint32_t         m_mip_levels            = 0;
-    vk::Image        m_texture_image        = nullptr;
-    vk::ImageView    m_texture_image_view   = nullptr;
-    vk::Sampler      m_texture_sampler      = nullptr;
-    vk::DeviceMemory m_texture_image_memory = nullptr;
+    // uint32_t         m_mip_levels           = 0;
+    // vk::Image        m_texture_image        = nullptr;
+    // vk::ImageView    m_texture_image_view   = nullptr;
+    // vk::DeviceMemory m_texture_image_memory = nullptr;
+    vk::Sampler m_texture_sampler = nullptr;
 
     vk::Image        m_depth_image        = nullptr;
     vk::ImageView    m_depth_image_view   = nullptr;
@@ -90,7 +91,6 @@ struct VulkanContext {
     vk::ImageView    m_color_image_view   = nullptr;
     vk::DeviceMemory m_color_image_memory = nullptr;
 
-
     // These are automatically cleaned up when the device is destroyed
     vk::Queue m_graphics_queue = nullptr; // for graphics and presenting
     vk::Queue m_present_queue =
@@ -100,6 +100,10 @@ struct VulkanContext {
     vk::detail::DynamicLoader m_dl;
 
     vk::SampleCountFlagBits m_msaa_samples = vk::SampleCountFlagBits::e1;
+
+    vk::CommandBuffer& get_current_command_buffer() {
+        return m_command_buffers[m_frame_index];
+    }
 };
 
 } // namespace varicle::render::vulkan

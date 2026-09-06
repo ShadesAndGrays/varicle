@@ -145,7 +145,7 @@ void recreate_swap_chain(VulkanContext& ctx) {
     int width = 0, height = 0;
     do {
         glfwGetFramebufferSize(ctx.m_window, &width, &height);
-        glfwWaitEvents();
+        // glfwWaitEvents();
     } while (width == 0 || height == 0);
 
     ctx.m_device.waitIdle();

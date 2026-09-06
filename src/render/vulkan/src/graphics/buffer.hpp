@@ -1,5 +1,6 @@
 #pragma once
 #include "core/context.hpp"
+#include "graphics/resource.hpp"
 #include <utility>
 
 namespace varicle::render::vulkan {
@@ -20,10 +21,10 @@ uint32_t find_memory_type(
     vk::MemoryPropertyFlags properties
 );
 
-void create_vertex_buffer(VulkanContext& ctx);
-void create_index_buffer(VulkanContext& ctx);
+void create_vertex_buffer(VulkanContext& ctx,Mesh& mesh);
+void create_index_buffer(VulkanContext& ctx,Mesh& mesh);
 void create_uniform_buffer(VulkanContext& ctx);
-void update_uniform_buffer(VulkanContext& ctx);
+void update_uniform_buffer(VulkanContext& ctx,Object object,Camera camera);
 
 void create_command_buffers(VulkanContext& ctx);
 

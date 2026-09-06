@@ -1,10 +1,12 @@
+#include "graphics/resource.hpp"
 #include <core/context.hpp>
 
 namespace varicle::render::vulkan {
 
 void create_descriptor_set_layout(VulkanContext& ctx);
 void create_descriptor_pool(VulkanContext& ctx);
-void create_descriptor_set(VulkanContext& ctx);
+// void create_descriptor_set(VulkanContext& ctx);
+void create_descriptor_set(VulkanContext& ctx,const Texture& texture);
 
 void create_graphics_pipeline(VulkanContext& ctx);
 
