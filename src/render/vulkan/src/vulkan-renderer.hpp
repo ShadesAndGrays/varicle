@@ -1,5 +1,6 @@
 #pragma once
 #include "common.hpp"
+#include "graphics/resource-manager.hpp"
 #include <vulkan/vulkan.hpp>
 
 namespace varicle::render::vulkan {
@@ -7,7 +8,8 @@ namespace varicle::render::vulkan {
 class VulkanRenderer : public IRender {
 
   public:
-    bool should_close_window() override;
+    GLFWwindow* get_window() override;
+    bool        should_close_window() override;
 
     void
 
@@ -22,13 +24,17 @@ class VulkanRenderer : public IRender {
 
     void resieze(uint32_t width, uint32_t height) override {}
 
-    TextureHandle create_texture(const char* filepath) override {
-        return INVALID_TEXTURE;
-    }
+    TextureHandle load_texture(const char* filepath) override;
+    void          destroy_texture(TextureHandle texture) override;
 
-    void destroy_texture(TextureHandle texture) override {}
+    TextureHandle load_mesh(const char* filepath) override;
+    void          destroy_mesh(MeshHandle mesh) override;
 
-    void draw_rect(const Rect& rect, const Color& color) override {}
+    void draw_rect(const Rect& rect, const Color& color) override;
+
+    void draw_mesh(MeshHandle mesh) override;
+
+    void draw_v_cube();
 
     void draw_texured_rect(
         const Rect&   rect,
@@ -38,7 +44,8 @@ class VulkanRenderer : public IRender {
 
   private:
     struct Impl;
-    Impl* impl = nullptr;
+    ResourceManager resource_manager;
+    Impl*           impl = nullptr;
 };
 
 } // namespace varicle::render::vulkan

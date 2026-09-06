@@ -1,8 +1,9 @@
 #include "graphics/buffer.hpp"
 #include "core/config.hpp"
-#include "core/vertex.hpp"
+#include "graphics/resource.hpp"
 #include "util/command.hpp"
 #include <chrono>
+#include <span>
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE // Depth 0 - 1 rather than -1 to 1
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -127,7 +128,7 @@ void update_uniform_buffer(VulkanContext& ctx) {
                      .count();
     UniformBufferObject ubo{};
     ubo.model = glm::rotate(
-        glm::mat4(1.0f), time * glm::radians(         10.0f), glm::vec3(0.0f, 0.0f, 1.0f)
+        glm::mat4(1.0f), time * glm::radians(10.0f), glm::vec3(0.0f, 0.0f, 1.0f)
     );
     ubo.view = glm::lookAt(
         glm::vec3(2.0f, 2.0f, 2.0f),
@@ -147,12 +148,17 @@ void update_uniform_buffer(VulkanContext& ctx) {
     memcpy(ctx.m_uniform_buffers_mapped[ctx.m_frame_index], &ubo, sizeof(ubo));
 }
 
-void create_index_buffer(VulkanContext& ctx) {
-    vk::DeviceSize buffer_size = sizeof(ctx.indices[0]) * ctx.indices.size();
+void create_index_buffer(VulkanContext& ctx, Mesh& mesh) {
 
+    // Size of bfufer
+    vk::DeviceSize buffer_size =
+        sizeof(mesh.m_indices[0]) * mesh.m_indices.size();
+
+    // graphics_family incase we transfer
     std::array<uint32_t, 2> qf = { ctx.m_indices.graphics_family.value(),
                                    ctx.m_indices.transfer_family.value() };
 
+    // staging buffer for host visible buffer
     auto [staging_buffer, staging_buffer_memory] = create_buffer(
         ctx,
         buffer_size,
@@ -162,10 +168,12 @@ void create_index_buffer(VulkanContext& ctx) {
         qf
     );
 
-    void* data = ctx.m_device.mapMemory(staging_buffer_memory, 0, buffer_size);
-    memcpy(data, ctx.indices.data(), static_cast<size_t>(buffer_size));
+    void* data = ctx.m_device.mapMemory(staging_buffer_memory, 0,
+    buffer_size); memcpy(data, mesh.m_indices.data(),
+    static_cast<size_t>(buffer_size));
     ctx.m_device.unmapMemory(staging_buffer_memory);
-    std::tie(ctx.m_index_buffer, ctx.m_index_buffer_memory) = create_buffer(
+
+    std::tie(mesh.m_index_buffer, mesh.m_index_buffer_memory) = create_buffer(
         ctx,
         buffer_size,
         vk::BufferUsageFlagBits::eIndexBuffer |
@@ -174,16 +182,23 @@ void create_index_buffer(VulkanContext& ctx) {
         qf
     );
 
-    copy_buffer(ctx, staging_buffer, ctx.m_index_buffer, buffer_size);
+    copy_buffer(ctx, staging_buffer, mesh.m_index_buffer, buffer_size);
+
     ctx.m_device.freeMemory(staging_buffer_memory);
     ctx.m_device.destroyBuffer(staging_buffer);
+
 }
 
-void create_vertex_buffer(VulkanContext& ctx) {
-    vk::DeviceSize          buffer_size = sizeof(ctx.vertices[0]) * ctx.vertices.size();
+void create_vertex_buffer(VulkanContext& ctx, Mesh& mesh) {
+    // We get the size of the buffer we want to create
+    vk::DeviceSize buffer_size =
+        sizeof(mesh.m_vertices[0]) * mesh.m_vertices.size();
+
+    // we just now
     std::array<uint32_t, 2> qf = { ctx.m_indices.graphics_family.value(),
                                    ctx.m_indices.transfer_family.value() };
 
+    // create a host visible buffer for staging
     auto [staging_buffer, staging_buffer_memory] = create_buffer(
         ctx,
         buffer_size,
@@ -192,11 +207,15 @@ void create_vertex_buffer(VulkanContext& ctx) {
             vk::MemoryPropertyFlagBits::eHostCoherent,
         qf
     );
+
+    // Map the data and transfer the data from our vector to the staging
+    // buffer
     void* data = ctx.m_device.mapMemory(staging_buffer_memory, 0, buffer_size);
-    memcpy(data, ctx.vertices.data(), buffer_size);
+    memcpy(data, mesh.m_vertices.data(), buffer_size);
     ctx.m_device.unmapMemory(staging_buffer_memory);
 
-    std::tie(ctx.m_vertex_buffer, ctx.m_vertex_buffer_memory) = create_buffer(
+    // Here we create the gpu local buffer
+    std::tie(mesh.m_vertex_buffer, mesh.m_vertex_buffer_memory) = create_buffer(
         ctx,
         buffer_size,
         vk::BufferUsageFlagBits::eVertexBuffer |
@@ -205,55 +224,77 @@ void create_vertex_buffer(VulkanContext& ctx) {
         qf
     );
 
-    copy_buffer(ctx, staging_buffer, ctx.m_vertex_buffer, buffer_size);
+    copy_buffer(ctx, staging_buffer, mesh.m_vertex_buffer, buffer_size);
+
+    // finally we release the staging buffer
     ctx.m_device.freeMemory(staging_buffer_memory);
     ctx.m_device.destroyBuffer(staging_buffer);
 }
 
-// [[deprecated("Not scalable, create_vertex_buffer")]] void
-// create_vertex_buffer_prev(VulkanContext& ctx) {
+// void create_index_buffer(VulkanContext& ctx) {
+//     vk::DeviceSize buffer_size = sizeof(ctx.indices[0]) * ctx.indices.size();
+//
 //     std::array<uint32_t, 2> qf = { ctx.m_indices.graphics_family.value(),
 //                                    ctx.m_indices.transfer_family.value() };
 //
-//     vk::BufferCreateInfo buffer_info{
-//         .size  = sizeof(vertices[0]) * vertices.size(),
-//         .usage = vk::BufferUsageFlagBits::eVertexBuffer,
-//         // setting this to eConcurrent so the buffer can be transfered between
-//         // gpu. It's less efficient than exclusive but for not it's fine
-//         .sharingMode =
-//             vk::SharingMode::eConcurrent, // or vk::SharingMode::eExclusive
-//         .queueFamilyIndexCount = qf.size(),
-//         .pQueueFamilyIndices   = qf.data(),
-//     };
-//     ctx.m_vertex_buffer = ctx.m_device.createBuffer(buffer_info);
-//
-//     vk::MemoryRequirements mem_requirements =
-//         ctx.m_device.getBufferMemoryRequirements(ctx.m_vertex_buffer);
-//
-//     /* Allocates memory for the buffer with requested size.
-//      * Host Visible: I want to CPU to be able to map too it
-//      * Host Coherent: Send now. Do not wait for flush
-//      */
-//     vk::MemoryAllocateInfo memoryAllocateInfo{
-//         .allocationSize  = mem_requirements.size,
-//         .memoryTypeIndex = find_memory_type(
-//             ctx,
-//             mem_requirements.memoryTypeBits,
-//             vk::MemoryPropertyFlagBits::eHostVisible |
-//                 vk::MemoryPropertyFlagBits::eHostCoherent
-//         )
-//     };
-//
-//     ctx.m_vertex_buffer_memory =
-//         ctx.m_device.allocateMemory(memoryAllocateInfo);
-//     ctx.m_device.bindBufferMemory(
-//         ctx.m_vertex_buffer, ctx.m_vertex_buffer_memory, 0
+//     auto [staging_buffer, staging_buffer_memory] = create_buffer(
+//         ctx,
+//         buffer_size,
+//         vk::BufferUsageFlagBits::eTransferSrc,
+//         vk::MemoryPropertyFlagBits::eHostVisible |
+//             vk::MemoryPropertyFlagBits::eHostCoherent,
+//         qf
 //     );
 //
-//     void* data =
-//         ctx.m_device.mapMemory(ctx.m_vertex_buffer_memory, 0, buffer_info.size);
-//     memcpy(data, vertices.data(), buffer_info.size);
-//     ctx.m_device.unmapMemory(ctx.m_vertex_buffer_memory);
+//     void* data = ctx.m_device.mapMemory(staging_buffer_memory, 0,
+//     buffer_size); memcpy(data, ctx.indices.data(),
+//     static_cast<size_t>(buffer_size));
+//     ctx.m_device.unmapMemory(staging_buffer_memory);
+//     std::tie(ctx.m_index_buffer, ctx.m_index_buffer_memory) = create_buffer(
+//         ctx,
+//         buffer_size,
+//         vk::BufferUsageFlagBits::eIndexBuffer |
+//             vk::BufferUsageFlagBits::eTransferDst,
+//         vk::MemoryPropertyFlagBits::eDeviceLocal,
+//         qf
+//     );
+//
+//     copy_buffer(ctx, staging_buffer, ctx.m_index_buffer, buffer_size);
+//     ctx.m_device.freeMemory(staging_buffer_memory);
+//     ctx.m_device.destroyBuffer(staging_buffer);
+// }
+
+// void create_vertex_buffer(VulkanContext& ctx) {
+//     vk::DeviceSize          buffer_size = sizeof(ctx.vertices[0]) *
+//     ctx.vertices.size(); std::array<uint32_t, 2> qf = {
+//     ctx.m_indices.graphics_family.value(),
+//                                    ctx.m_indices.transfer_family.value() };
+//
+//     auto [staging_buffer, staging_buffer_memory] = create_buffer(
+//         ctx,
+//         buffer_size,
+//         vk::BufferUsageFlagBits::eTransferSrc,
+//         vk::MemoryPropertyFlagBits::eHostVisible |
+//             vk::MemoryPropertyFlagBits::eHostCoherent,
+//         qf
+//     );
+//     void* data = ctx.m_device.mapMemory(staging_buffer_memory, 0,
+//     buffer_size); memcpy(data, ctx.vertices.data(), buffer_size);
+//     ctx.m_device.unmapMemory(staging_buffer_memory);
+//
+//     std::tie(ctx.m_vertex_buffer, ctx.m_vertex_buffer_memory) =
+//     create_buffer(
+//         ctx,
+//         buffer_size,
+//         vk::BufferUsageFlagBits::eVertexBuffer |
+//             vk::BufferUsageFlagBits::eTransferDst,
+//         vk::MemoryPropertyFlagBits::eDeviceLocal,
+//         qf
+//     );
+//
+//     copy_buffer(ctx, staging_buffer, ctx.m_vertex_buffer, buffer_size);
+//     ctx.m_device.freeMemory(staging_buffer_memory);
+//     ctx.m_device.destroyBuffer(staging_buffer);
 // }
 
 void create_command_buffers(VulkanContext& ctx) {
@@ -297,7 +338,5 @@ void create_sync_objects(VulkanContext& ctx) {
         ));
     }
 }
-
-
 
 } // namespace varicle::render::vulkan

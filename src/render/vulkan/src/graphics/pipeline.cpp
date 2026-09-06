@@ -1,13 +1,12 @@
 #include "graphics/pipeline.hpp"
 #include "core/config.hpp"
 #include "core/context.hpp"
-#include "core/vertex.hpp"
+#include "graphics/resource.hpp"
 #include "util/util.hpp"
-#include <print>
 
 namespace varicle::render::vulkan {
 
-void create_descriptor_set(VulkanContext& ctx) {
+void create_descriptor_set(VulkanContext& ctx,const Texture& texture) {
     std::vector<vk::DescriptorSetLayout> layouts(
         MAX_FRAMES_IN_FLIGHT, ctx.m_descriptor_set_layout
     );
@@ -20,7 +19,7 @@ void create_descriptor_set(VulkanContext& ctx) {
     // This guy here is where we allocate the memory
     ctx.m_descriptor_sets = ctx.m_device.allocateDescriptorSets(alloc_info);
 
-    std::println("Descriptor set count: {}", ctx.m_descriptor_sets.size());
+    // std::println("Descriptor set count: {}", ctx.m_descriptor_sets.size());
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vk::DescriptorBufferInfo buffer_info{
@@ -31,7 +30,7 @@ void create_descriptor_set(VulkanContext& ctx) {
         };
         vk::DescriptorImageInfo image_info{
             .sampler     = ctx.m_texture_sampler,
-            .imageView   = ctx.m_texture_image_view,
+            .imageView   = texture.m_image_view,
             .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
         };
 
@@ -142,8 +141,9 @@ void create_graphics_pipeline(VulkanContext& ctx) {
         .pName  = "fragMain"
     };
 
-    vk::PipelineShaderStageCreateInfo shader_stages[] = { vert_shader_stageInfo,
-                                                         frag_shader_stageInfo };
+    vk::PipelineShaderStageCreateInfo shader_stages[] = {
+        vert_shader_stageInfo, frag_shader_stageInfo
+    };
 
     auto binding_description    = Vertex::getBindingDescription();
     auto attribute_descriptions = Vertex::getAttributeDescriptions();
@@ -178,7 +178,7 @@ void create_graphics_pipeline(VulkanContext& ctx) {
     };
 
     vk::PipelineViewportStateCreateInfo viewport_state{ .viewportCount = 1,
-                                                       .scissorCount  = 1 };
+                                                        .scissorCount  = 1 };
 
     vk::PipelineDepthStencilStateCreateInfo depth_stencil{
         .depthTestEnable       = vk::True,
@@ -203,7 +203,7 @@ void create_graphics_pipeline(VulkanContext& ctx) {
     vk::PipelineMultisampleStateCreateInfo multisampling{
         .rasterizationSamples = ctx.m_msaa_samples,
         .sampleShadingEnable  = vk::True,
-        .minSampleShading = 0.2f
+        .minSampleShading     = 0.2f
 
     };
 
@@ -258,7 +258,7 @@ void create_graphics_pipeline(VulkanContext& ctx) {
     vk::PipelineRenderingCreateInfo pipeline_rendering_create_info{
         .colorAttachmentCount    = 1,
         .pColorAttachmentFormats = &ctx.m_swap_chain_surface_format.format,
-        .depthAttachmentFormat = ctx.m_depth_format
+        .depthAttachmentFormat   = ctx.m_depth_format
     };
 
     vk::StructureChain<

@@ -9,11 +9,16 @@
 #include "graphics/buffer.hpp"
 #include "graphics/image.hpp"
 #include "graphics/pipeline.hpp"
-#include "model/model.hpp"
+#include "graphics/resource.hpp"
 
 #include <print>
 
+// const char* TEXTURE_PATH = "textures/cube.png";
+using namespace varicle::render;
 using namespace varicle::render::vulkan;
+
+MeshHandle    RECTANGLE;
+TextureHandle DEFAULT_TEXTURE;
 
 void VulkanRenderer ::init(
     uint32_t    width,
@@ -40,17 +45,37 @@ void VulkanRenderer ::init(
     create_color_resources(ctx);
     create_depth_resources(ctx);
     create_graphics_pipeline(ctx);
-    load_model(ctx);
-    create_vertex_buffer(ctx);
-    create_index_buffer(ctx);
-    create_texture_image(ctx);
-    create_texture_image_view(ctx);
+    // load_model(ctx);
+    // create_vertex_buffer(ctx);
+    // create_index_buffer(ctx);
+    // create_texture_image(ctx);
+    // create_texture_image_view(ctx);
+
+    // auto default_texture =  resource_manager.create_default_texture(ctx);
+    // DEFAULT_TEXTURE =
+    // resource_manager.add_texture(ctx,std::move(default_texture));
+    DEFAULT_TEXTURE = resource_manager.load_texture(ctx, "textures/cube.png");
     create_texture_sampler(ctx);
     create_uniform_buffer(ctx);
     create_descriptor_pool(ctx);
-    create_descriptor_set(ctx);
+    create_descriptor_set(
+        ctx, resource_manager.get_texture(ctx, DEFAULT_TEXTURE)
+    );
     create_command_buffers(ctx);
     create_sync_objects(ctx);
+
+    Mesh rectangle(
+        { { { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+          { { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+          { { 0.5f, 0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+          { { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } } },
+        { 0, 1, 2, 2, 3, 0 }
+    );
+
+    create_vertex_buffer(ctx,rectangle);
+    create_index_buffer(ctx,rectangle);
+    RECTANGLE = resource_manager.add_mesh(ctx, std::move(rectangle));
+    // std::println("mesh handle {}",Rectangle);
 }
 
 bool VulkanRenderer::should_close_window() {
@@ -78,21 +103,27 @@ void VulkanRenderer::shutdown() {
 
     ctx.m_device.destroyDescriptorPool(ctx.m_descriptor_pool);
 
-    // images
+    resource_manager.unload_all_meshes(ctx);
+    resource_manager.unload_all_texures(ctx);
     ctx.m_device.destroySampler(ctx.m_texture_sampler);
-    ctx.m_device.destroyImageView(ctx.m_texture_image_view);
-    ctx.m_device.freeMemory(ctx.m_texture_image_memory);
-    ctx.m_device.destroyImage(ctx.m_texture_image);
+    // images
+    // ctx.m_device.destroyImageView(ctx.m_texture_image_view);
+    // ctx.m_device.freeMemory(ctx.m_texture_image_memory);
+    // ctx.m_device.destroyImage(ctx.m_texture_image);
 
     ctx.m_device.destroyImageView(ctx.m_depth_image_view);
     ctx.m_device.freeMemory(ctx.m_depth_image_memory);
     ctx.m_device.destroyImage(ctx.m_depth_image);
 
+    ctx.m_device.destroyImageView(ctx.m_color_image_view);
+    ctx.m_device.freeMemory(ctx.m_color_image_memory);
+    ctx.m_device.destroyImage(ctx.m_color_image);
+
     // Buffers
-    ctx.m_device.freeMemory(ctx.m_vertex_buffer_memory);
-    ctx.m_device.freeMemory(ctx.m_index_buffer_memory);
-    ctx.m_device.destroyBuffer(ctx.m_vertex_buffer);
-    ctx.m_device.destroyBuffer(ctx.m_index_buffer);
+    // ctx.m_device.freeMemory(ctx.m_vertex_buffer_memory);
+    // ctx.m_device.freeMemory(ctx.m_index_buffer_memory);
+    // ctx.m_device.destroyBuffer(ctx.m_vertex_buffer);
+    // ctx.m_device.destroyBuffer(ctx.m_index_buffer);
 
     for (auto& i : ctx.m_uniform_buffers_memory) {
         ctx.m_device.freeMemory(i);
@@ -231,7 +262,8 @@ void VulkanRenderer::begin_frame(bool clear_screen) {
         .resolveMode        = vk::ResolveModeFlagBits::eAverage,
         .resolveImageView   = ctx.m_swap_chain_image_views[image_index],
         .resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-        .loadOp             = clear_screen ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad,
+        .loadOp             = clear_screen ? vk::AttachmentLoadOp::eClear
+                                           : vk::AttachmentLoadOp::eLoad,
         .storeOp            = vk::AttachmentStoreOp::eStore,
         .clearValue         = ctx.m_clear_color
     };
@@ -263,14 +295,6 @@ void VulkanRenderer::begin_frame(bool clear_screen) {
     cmd.beginRendering(rendering_info);
     cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, ctx.m_graphics_pipeline);
 
-    cmd.bindVertexBuffers(0, ctx.m_vertex_buffer, { 0 });
-
-    cmd.bindIndexBuffer(
-        ctx.m_index_buffer,
-        0,
-        vk::IndexTypeValue<decltype(ctx.indices)::value_type>::value
-    );
-
     cmd.setViewport(
         0,
         vk::Viewport(
@@ -283,17 +307,6 @@ void VulkanRenderer::begin_frame(bool clear_screen) {
         )
     );
     cmd.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), ctx.m_swap_chain_extent));
-
-    cmd.bindDescriptorSets(
-        vk::PipelineBindPoint::eGraphics,
-        ctx.m_pipeline_layout,
-        0,
-        ctx.m_descriptor_sets[ctx.m_frame_index],
-        nullptr
-    );
-    cmd.drawIndexed(static_cast<uint32_t>(ctx.indices.size()), 1, 0, 0, 0);
-
-    update_uniform_buffer(ctx);
 }
 
 void VulkanRenderer::end_frame() {
@@ -359,3 +372,119 @@ void VulkanRenderer::end_frame() {
 
     glfwPollEvents();
 }
+TextureHandle VulkanRenderer::load_texture(const char* filepath) {
+    auto& ctx = impl->v_context;
+    return resource_manager.load_texture(ctx, filepath);
+}
+
+void VulkanRenderer::destroy_texture(TextureHandle texture) {
+    auto& ctx = impl->v_context;
+    resource_manager.unload_texture(ctx, texture);
+}
+
+TextureHandle VulkanRenderer::load_mesh(const char* filepath) {
+
+    auto& ctx = impl->v_context;
+    return resource_manager.load_mesh(ctx, filepath);
+};
+
+void VulkanRenderer::destroy_mesh(MeshHandle mesh) {
+
+    auto& ctx = impl->v_context;
+    resource_manager.unload_mesh(ctx, mesh);
+};
+
+void VulkanRenderer::draw_rect(const Rect& rect, const Color& color) {
+    auto&             ctx = impl->v_context;
+    vk::CommandBuffer cmd = ctx.m_command_buffers[ctx.m_frame_index];
+
+    const std::vector<Vertex> vertices{
+        { { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+        { { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+        { { 0.5f, 0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+        { { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+
+        { { -0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+        { { 0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+        { { 0.5f, 0.5f, -0.5f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+        { { -0.5f, 0.5f, -0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+    };
+
+    const std::vector<uint16_t> indices = {
+        0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4
+    };
+
+    // cmd.
+}
+
+void VulkanRenderer::draw_mesh(MeshHandle mesh_handle) {
+    auto& ctx = impl->v_context;
+
+    auto& mesh = resource_manager.get_mesh(ctx, mesh_handle);
+    auto  cmd  = ctx.get_current_command_buffer();
+
+    cmd.bindVertexBuffers(0, mesh.m_vertex_buffer, { 0 });
+
+    cmd.bindIndexBuffer(
+        mesh.m_index_buffer,
+        0,
+        vk::IndexTypeValue<decltype(mesh.m_indices)::value_type>::value
+    );
+
+    cmd.bindDescriptorSets(
+        vk::PipelineBindPoint::eGraphics,
+        ctx.m_pipeline_layout,
+        0,
+        ctx.m_descriptor_sets[ctx.m_frame_index],
+        nullptr
+    );
+    cmd.drawIndexed(static_cast<uint32_t>(mesh.m_indices.size()), 1, 0, 0, 0);
+
+    update_uniform_buffer(ctx);
+}
+
+GLFWwindow* VulkanRenderer::get_window() {
+    auto& ctx = impl->v_context;
+    return ctx.m_window;
+}
+
+// const std::vector<Vertex> vertices{
+//     { { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+//     { { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+//     { { 0.5f, 0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+//     { { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+//
+//     { { -0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+//     { { 0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+//     { { 0.5f, 0.5f, -0.5f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+//     { { -0.5f, 0.5f, -0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+// };
+//
+// const std::vector<uint16_t> indices = {
+//     0, 1, 2, 2, 3, 0 ,4 , 5 ,6  , 6 ,7 , 4};
+
+// void VulkanRenderer::draw_v_cube() {
+//     auto&             ctx = impl->v_context;
+//     auto cmd = ctx.get_current_command_buffer();
+//
+//     cmd.bindVertexBuffers(0, ctx.m_vertex_buffer, { 0 });
+//
+//     cmd.bindIndexBuffer(
+//         ctx.m_index_buffer,
+//         0,
+//         vk::IndexTypeValue<decltype(ctx.indices)::value_type>::value
+//     );
+//
+//
+//     cmd.bindDescriptorSets(
+//         vk::PipelineBindPoint::eGraphics,
+//         ctx.m_pipeline_layout,
+//         0,
+//         ctx.m_descriptor_sets[ctx.m_frame_index],
+//         nullptr
+//     );
+//     cmd.drawIndexed(static_cast<uint32_t>(ctx.indices.size()), 1, 0, 0, 0);
+//
+//     update_uniform_buffer(ctx);
+//
+//   }

@@ -51,10 +51,11 @@ target_sources(${TEMPLATE_NAME}
     src/core/device.cpp
     src/core/validation.cpp
     src/core/swap-chain.cpp
+    src/graphics/image.cpp
     src/graphics/buffer.cpp
     src/graphics/pipeline.cpp
-    src/graphics/image.cpp
-    src/model/model.cpp
+    src/graphics/resource-manager.cpp
+ 
 )
 
 target_include_directories(${TEMPLATE_NAME}

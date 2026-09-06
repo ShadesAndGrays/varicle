@@ -1,4 +1,7 @@
 #pragma once
+
+#include "handles.hpp"
+#include <GLFW/glfw3.h>
 #include <cstdint>
 
 namespace varicle::render {
@@ -11,12 +14,11 @@ struct Rect {
     float x, y, width, height;
 };
 
-using TextureHandle                     = uint32_t;
-constexpr TextureHandle INVALID_TEXTURE = 0;
-
 class IRender {
   public:
     virtual ~IRender() = default;
+
+    virtual GLFWwindow* get_window() = 0;
 
     // Lifecycle
     virtual void
@@ -26,15 +28,20 @@ class IRender {
     virtual bool should_close_window()                             = 0;
 
     // Frame Management
-    virtual void set_clear_color(Color background) = 0;
-    virtual void begin_frame(bool clear_screen = true)                 = 0;
-    virtual void end_frame()                   = 0;
+    virtual void set_clear_color(Color background)     = 0;
+    virtual void begin_frame(bool clear_screen = true) = 0;
+    virtual void end_frame()                           = 0;
 
     // Texture Managment
-    virtual TextureHandle create_texture(const char* filepath)   = 0;
-    virtual void destroy_texture(TextureHandle texture) = 0;
+    virtual TextureHandle load_texture(const char* filepath)     = 0;
+    virtual void          destroy_texture(TextureHandle texture) = 0;
+
+    // Mesh Managment
+    virtual MeshHandle load_mesh(const char* filepath) = 0;
+    virtual void       destroy_mesh(MeshHandle mesh)   = 0;
 
     // Drawing Command
+    virtual void draw_mesh(MeshHandle mesh) = 0;
     virtual void draw_rect(const Rect& rect, const Color& color) = 0;
 
     virtual void draw_texured_rect(
