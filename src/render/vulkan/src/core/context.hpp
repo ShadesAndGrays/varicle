@@ -1,8 +1,5 @@
 #pragma once
 
-#include "common.hpp"
-#include "graphics/resource.hpp"
-#include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
 
@@ -21,10 +18,13 @@ struct QueueFamilyIndices {
 
 struct VulkanContext {
 
-    GLFWwindow*        m_window = nullptr;
+    // GLFWwindow*        m_window = nullptr;
     QueueFamilyIndices m_indices;
     uint32_t           m_frame_index         = 0;
     bool               m_framebuffer_resized = false;
+    bool               m_framebuffer_visible = false; // for when it's minimized
+    uint32_t           width                 = 0;
+    uint32_t           height                = 0;
     uint32_t           m_image_index         = 0;
     bool               m_recreating_frame    = false;
     vk::ClearValue m_clear_color = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);

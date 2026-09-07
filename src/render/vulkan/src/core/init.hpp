@@ -1,14 +1,9 @@
 #pragma once
 #include "core/context.hpp"
+#include "common.hpp"
 
 namespace varicle::render::vulkan {
 
-void init_window(
-    VulkanContext& ctx,
-    uint32_t       width  = 800,
-    uint32_t       height = 600,
-    const char*    name   = "Varicle"
-);
 
 vk::ApplicationInfo create_app();
 
@@ -20,6 +15,6 @@ vk::InstanceCreateInfo create_instance_info(
 );
 
 void create_instance(VulkanContext& ctx);
-void create_surface(VulkanContext& ctx);
+void create_surface(VulkanContext& ctx,Window &window);
 
 } // namespace varicle::render::vulkan

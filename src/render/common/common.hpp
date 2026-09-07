@@ -4,17 +4,26 @@
 #include <GLFW/glfw3.h>
 #include <cstdint>
 #include <glm/glm.hpp>
-// Forward decleration
-
-// Strucutre for managing mesh level transfromations
-// Stick with simple oop for now consider SOA for future optimizations
-
-class GLWindow {
-  private:
-    GLFWwindow* window;
-};
 
 namespace varicle::render {
+
+class Window {
+  private:
+    GLFWwindow* m_window;
+
+  public:
+    void        init(int width, int height, const char* title);
+    GLFWwindow* get_window();
+
+    std::tuple<int, int> size();
+
+    bool  should_close_window();
+    float get_aspect();
+    ~Window() {
+        glfwDestroyWindow(m_window);
+        glfwTerminate();
+    }
+};
 
 // Strucutre for managing mesh level transfromations
 // Stick with simple oop for now consider SOA for future optimizations
@@ -59,21 +68,20 @@ struct Rect {
 class IRender {
   public:
     virtual void    set_camera(Camera camera) = 0;
-    virtual Camera& get_camera() = 0;
-    virtual ~IRender() = default;
+    virtual Camera& get_camera()              = 0;
+    virtual ~IRender()                        = default;
 
-    [[deprecated(
-        "This should be removed as user should not need access to window "
-        "outside render"
-    )]] virtual GLFWwindow*
-    get_window() = 0;
+    // [[deprecated(
+    //     "This should be removed as user should not need access to window "
+    //     "outside render"
+    // )]] virtual GLFWwindow*
+    // get_window() = 0;
 
     // Lifecycle
-    virtual void
-    init(uint32_t width, uint32_t height, const char* window_name) = 0;
-    virtual void shutdown()                                        = 0;
-    virtual void resieze(uint32_t width, uint32_t height)          = 0;
-    virtual bool should_close_window()                             = 0;
+    virtual void init(Window& window)                    = 0;
+    virtual void shutdown()                              = 0;
+    virtual void resize(uint32_t width, uint32_t height) = 0;
+    // virtual bool should_close_window()                    = 0;
 
     // Frame Management
     virtual void set_clear_color(Color background)     = 0;
@@ -89,15 +97,7 @@ class IRender {
     virtual void       destroy_mesh(MeshHandle mesh)   = 0;
 
     // Drawing Command
-    virtual void draw_mesh(
-        glm::vec3      position,
-        glm::vec3      rotation,
-        glm::vec3      scale,
-        MeshHandle     mesh     = INVALID_MESH,
-        TextureHandle  texture  = INVALID_TEXTURE,
-        MaterialHandle material = INVALID_MATERIAL
-    ) = 0;
-
+    virtual void draw_object(Object object) = 0;
     virtual void draw_mesh(MeshHandle mesh)                      = 0;
     virtual void draw_rect(const Rect& rect, const Color& color) = 0;
 

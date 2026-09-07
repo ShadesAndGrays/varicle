@@ -8,12 +8,7 @@ namespace varicle::render::vulkan {
 class VulkanRenderer : public IRender {
 
   public:
-    GLFWwindow* get_window() override;
-    bool        should_close_window() override;
-
-    void
-
-    init(uint32_t width, uint32_t height, const char* window_name) override;
+    void init(Window& window) override;
 
     void shutdown() override;
 
@@ -22,7 +17,7 @@ class VulkanRenderer : public IRender {
 
     void end_frame() override;
 
-    void resieze(uint32_t width, uint32_t height) override {}
+    void resize(uint32_t width, uint32_t height) override;
 
     TextureHandle load_texture(const char* filepath) override;
     void          destroy_texture(TextureHandle texture) override;
@@ -31,15 +26,10 @@ class VulkanRenderer : public IRender {
     void          destroy_mesh(MeshHandle mesh) override;
 
     void draw_rect(const Rect& rect, const Color& color) override;
+
+    void draw_object(Object object) override;
+
     void draw_mesh(MeshHandle mesh) override;
-    void draw_mesh(
-        glm::vec3      position,
-        glm::vec3      rotation,
-        glm::vec3      scale,
-        MeshHandle     mesh     = INVALID_MESH,
-        TextureHandle  texture  = INVALID_TEXTURE,
-        MaterialHandle material = INVALID_MATERIAL
-    ) override;
 
     void draw_v_cube();
 

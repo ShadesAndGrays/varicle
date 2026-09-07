@@ -2,8 +2,6 @@
 #include "core/config.hpp"
 #include "graphics/resource.hpp"
 #include "util/command.hpp"
-#include <chrono>
-#include <print>
 #include <span>
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE // Depth 0 - 1 rather than -1 to 1
 #include <glm/glm.hpp>
@@ -121,32 +119,13 @@ void create_uniform_buffer(VulkanContext& ctx) {
     }
 }
 
-void update_uniform_buffer(VulkanContext& ctx, Object object,Camera camera) {
-    static auto start_time   = std::chrono::high_resolution_clock::now();
-    auto        current_time = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(
-                     current_time - start_time
-    )
-                     .count();
-
-    glm::mat4 mvp = camera.get_projection_matix() * camera.get_view_matrix() *
-        object.get_model_matrix();
-
-
-    auto& cmd = ctx.get_current_command_buffer();
-    cmd.pushConstants(
-        ctx.m_pipeline_layout,
-        vk::ShaderStageFlagBits::eVertex,
-        0,
-        sizeof(glm::mat4),
-        &mvp
-    );
-
-    // This is not that efficient. look into push constants
-    // memcpy(ctx.m_uniform_buffers_mapped[ctx.m_frame_index], &ubo,
-    // sizeof(ubo));
-}
-
+// void update_uniform_buffer(VulkanContext& ctx, Object object,Camera camera) {
+//
+//     // This is not that efficient. look into push constants
+//     // memcpy(ctx.m_uniform_buffers_mapped[ctx.m_frame_index], &ubo,
+//     // sizeof(ubo));
+// }
+//
 void create_index_buffer(VulkanContext& ctx, Mesh& mesh) {
 
     // Size of bfufer

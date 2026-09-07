@@ -1,5 +1,6 @@
 #include "core/swap-chain.hpp"
 #include "graphics/image.hpp"
+#include <GLFW/glfw3.h>
 #include <print>
 
 namespace varicle::render::vulkan {
@@ -101,16 +102,16 @@ vk::Extent2D choose_swap_extent(
         return capabilities.currentExtent;
     }
 
-    int width, height;
-    glfwGetFramebufferSize(ctx.m_window, &width, &height);
+    // int width, height;
+    // glfwGetFramebufferSize(ctx.m_window, &width, &height);
     return {
         std::clamp<uint32_t>(
-            width,
+            ctx.width,
             capabilities.minImageExtent.width,
             capabilities.maxImageExtent.width
         ),
         std::clamp<uint32_t>(
-            height,
+            ctx.height,
             capabilities.minImageExtent.height,
             capabilities.maxImageExtent.height
         ),
@@ -142,11 +143,9 @@ void cleanup_swap_chain(VulkanContext& ctx) {
 
 void recreate_swap_chain(VulkanContext& ctx) {
 
-    int width = 0, height = 0;
     do {
-        glfwGetFramebufferSize(ctx.m_window, &width, &height);
-        // glfwWaitEvents();
-    } while (width == 0 || height == 0);
+        glfwWaitEvents();
+    } while (!ctx.m_framebuffer_visible);
 
     ctx.m_device.waitIdle();
 
@@ -159,7 +158,6 @@ void recreate_swap_chain(VulkanContext& ctx) {
 
     cleanup_color_resources(ctx);
     create_color_resources(ctx);
-
 }
 
 } // namespace varicle::render::vulkan

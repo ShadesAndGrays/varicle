@@ -1,9 +1,9 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include "core/init.hpp"
 #include "core/config.hpp"
 #include "core/context.hpp"
+#include "core/init.hpp"
 #include "core/validation.hpp"
 
 #include <print>
@@ -16,31 +16,11 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 namespace varicle::render::vulkan {
 
 static void
-    framebuffer_resize_callback(GLFWwindow* window, int width, int height) {
-        auto ctx = reinterpret_cast<VulkanContext*>(
-            glfwGetWindowUserPointer(window)
-        );
-        ctx->m_framebuffer_resized = true;
-    }
-
-
-void init_window(
-    VulkanContext& ctx,
-    uint32_t       width,
-    uint32_t       height,
-    const char*    name
-) {
-    glfwInit();
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-
-    ctx.m_window = glfwCreateWindow(width, height, name, nullptr, nullptr);
-
-    glfwSetWindowUserPointer(ctx.m_window, &ctx);
-    glfwSetFramebufferSizeCallback(ctx.m_window,framebuffer_resize_callback);
-
+framebuffer_resize_callback(GLFWwindow* window, int width, int height) {
+    auto ctx =
+        reinterpret_cast<VulkanContext*>(glfwGetWindowUserPointer(window));
+    ctx->m_framebuffer_resized = true;
 }
-
 
 void create_instance(VulkanContext& ctx) {
 
@@ -105,16 +85,38 @@ vk::InstanceCreateInfo create_instance_info(
     return create_info;
 }
 
-void create_surface(VulkanContext& ctx) {
+void create_surface(VulkanContext& ctx, Window& window) {
 
-    VkSurfaceKHR surface = VK_NULL_HANDLE;
+    VkSurfaceKHR surface   = VK_NULL_HANDLE;
+    GLFWwindow*  gl_window = window.get_window();
 
-    VkResult result = glfwCreateWindowSurface(
-        ctx.m_instance, ctx.m_window, nullptr, &surface
-    );
+    VkResult result =
+        glfwCreateWindowSurface(ctx.m_instance, gl_window, nullptr, &surface);
     if (result != VK_SUCCESS) {
         throw std::runtime_error("failed to create window surface!");
     }
+
+    glfwSetWindowUserPointer(gl_window, &ctx);
+
+    glfwSetWindowIconifyCallback(
+        gl_window, [](GLFWwindow* gl_window, int is_iconified) {
+            auto ctx = reinterpret_cast<VulkanContext*>(
+                glfwGetWindowUserPointer(gl_window)
+            );
+            ctx->m_framebuffer_visible = is_iconified != GLFW_TRUE;
+        }
+    );
+
+    ctx.m_framebuffer_visible = true;
+
+    glfwSetWindowSizeCallback(
+        gl_window, [](GLFWwindow* gl_window, int width, int height) {
+            auto ctx = reinterpret_cast<VulkanContext*>(
+                glfwGetWindowUserPointer(gl_window)
+            );
+            ctx->m_framebuffer_resized = true;
+        }
+    );
 
     ctx.m_surface = vk::SurfaceKHR(surface);
 }
