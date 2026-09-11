@@ -1,0 +1,18 @@
+Index:
+  StandardLibrary: true
+CompileFlags:
+  Add:
+    - -I
+    - "C:/msys64/home/shadow/emsdk/upstream/emscripten/cache/sysroot/include"
+    - -DEMSCRIPTEN
+    - -I
+    - "C:/msys64/home/shadow/emsdk/upstream/emscripten/cache/ports/emdawnwebgpu/emdawnwebgpu_pkg/webgpu/include"
+    - -I
+    - "C:/msys64/home/shadow/emsdk/upstream/emscripten/cache/ports/emdawnwebgpu/emdawnwebgpu_pkg/webgpu_cpp/include"
+
+  Remove:
+    - -resource-dir=C:/msys64/clang64/lib/clang/22
+    - --use-port=emdawnwebgpu
+    - --closure=1
+  Compiler: "C:/msys64/home/shadow/emsdk/upstream/emscripten/em++.exe"
+  BuiltinHeaders: QueryDriver

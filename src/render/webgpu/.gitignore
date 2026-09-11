@@ -1,15 +1,15 @@
-# output dir
+# output
 build/
-build-desktop/
-build-web/
+build-*/
 dist/
 bin/
-web/
 debug/
 
 # artifacts
 compile_commands.json
+.build_cache.json
 imgui.ini
 data.dat
 .cache/
 .vscode/
+*.exe
