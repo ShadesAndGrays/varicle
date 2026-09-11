@@ -34,18 +34,6 @@ struct VSOutput {
 [shader("vertex")]
 VSOutput vertMain(VSInput input) {
     VSOutput output;
-    // output.pos = 
-    // mul(
-    //     ubo.proj,
-    //     mul (
-    //         ubo.view,
-    //         mul(
-    //             ubo.model,
-    //             float4(input.inPosition, 1.0)
-    //         )
-    //     )
-    // );
-    // output.pos = mul(pc.mvpMatrix, float4(input.inPosition,1.0f));
     output.pos = mul(pc.mvpMatrix, float4(input.inPosition,1.0f));
     output.color = input.inColor;
     output.fragTexCoord = input.inTexCoord;

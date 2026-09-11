@@ -6,7 +6,7 @@
 
 namespace varicle::render::vulkan {
 
-void create_descriptor_set(VulkanContext& ctx, const Texture& texture) {
+void create_descriptor_set(VulkanContext& ctx, std::span<Texture> textures) {
     std::vector<vk::DescriptorSetLayout> layouts(
         MAX_FRAMES_IN_FLIGHT, ctx.m_descriptor_set_layout
     );
@@ -28,11 +28,19 @@ void create_descriptor_set(VulkanContext& ctx, const Texture& texture) {
             .offset = 0,
             .range  = sizeof(UniformBufferObject)
         };
-        vk::DescriptorImageInfo image_info{
-            .sampler     = ctx.m_texture_sampler,
-            .imageView   = texture.m_image_view,
-            .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-        };
+
+        // Here we create and array of image views and allocate all of them at
+        // once
+        std::vector<vk::DescriptorImageInfo> image_infos;
+
+        image_infos.reserve(textures.size());
+        for (auto i = 0; i < textures.size(); i++) {
+            image_infos[i] = vk::DescriptorImageInfo{
+                .sampler     = ctx.m_texture_sampler,
+                .imageView   = textures[i].m_image_view,
+                .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+            };
+        }
 
         std::array<vk::WriteDescriptorSet, 2> descriptor_write
 
@@ -43,12 +51,24 @@ void create_descriptor_set(VulkanContext& ctx, const Texture& texture) {
                   .descriptorType  = vk::DescriptorType::eUniformBuffer,
                   .pBufferInfo     = &buffer_info },
 
+                // This was for a single image
+                // { .dstSet          = ctx.m_descriptor_sets[i],
+                //   .dstBinding      = 1,
+                //   .dstArrayElement = 0,
+                //   .descriptorCount = 1,
+                //   .descriptorType =
+                //       vk::DescriptorType::eCombinedImageSampler,
+                //   .pImageInfo = &image_info }
+
+                // this is now for our array
                 { .dstSet          = ctx.m_descriptor_sets[i],
                   .dstBinding      = 1,
                   .dstArrayElement = 0,
-                  .descriptorCount = 1,
-                  .descriptorType  = vk::DescriptorType::eCombinedImageSampler,
-                  .pImageInfo      = &image_info } } };
+                  .descriptorCount = static_cast<uint32_t>(image_infos.size()),
+                  .descriptorType  = vk::DescriptorType::eSampledImage,
+                  .pImageInfo      = image_infos.data() }
+
+            } };
 
         ctx.m_device.updateDescriptorSets(descriptor_write, {});
     }
@@ -160,14 +180,14 @@ void create_graphics_pipeline(VulkanContext& ctx) {
         .topology = vk::PrimitiveTopology::eTriangleList
     };
 
-    vk::Viewport viewport{ 0.0f,
-                           0.0f,
-                           static_cast<float>(ctx.m_swap_chain_extent.width),
-                           static_cast<float>(ctx.m_swap_chain_extent.height),
-                           0.0f,
-                           1.0f };
-
-    vk::Rect2D scissor{ vk::Offset2D{ 0, 0 }, ctx.m_swap_chain_extent };
+    // vk::Viewport viewport{ 0.0f,
+    //                        0.0f,
+    //                        static_cast<float>(ctx.m_swap_chain_extent.width),
+    //                        static_cast<float>(ctx.m_swap_chain_extent.height),
+    //                        0.0f,
+    //                        1.0f };
+    //
+    // vk::Rect2D scissor{ vk::Offset2D{ 0, 0 }, ctx.m_swap_chain_extent };
 
     std::vector<vk::DynamicState> dynamic_states = {
         vk::DynamicState::eViewport, vk::DynamicState::eScissor
@@ -241,7 +261,7 @@ void create_graphics_pipeline(VulkanContext& ctx) {
         .setLayoutCount         = 1,
         .pSetLayouts            = &ctx.m_descriptor_set_layout,
         .pushConstantRangeCount = 1,
-        .pPushConstantRanges = &push_constant_range
+        .pPushConstantRanges    = &push_constant_range
     };
 
     ctx.m_pipeline_layout = vk::PipelineLayout(
