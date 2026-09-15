@@ -18,7 +18,6 @@ struct QueueFamilyIndices {
 
 struct VulkanContext {
 
-    // GLFWwindow*        m_window = nullptr;
     QueueFamilyIndices m_indices;
     uint32_t           m_frame_index         = 0;
     bool               m_framebuffer_resized = false;

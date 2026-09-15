@@ -87,7 +87,7 @@ target_compile_definitions(${TEMPLATE_NAME} PRIVATE "VULKAN_HPP_HANDLE_ERROR_OUT
 # Slang shader
 # set (SHADER_TARGET ${TEMPLATE_NAME}Shader)
 # set (SHADERS_DIR ${TEMPLATE_DIR}/shaders)
-# set (SHADER_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shaders/shader.slang")
+set (SHADER_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shaders/shader.slang")
 # set (ENTRY_POINTS -entry vertMain -entry fragMain)
 # add_custom_command(OUTPUT ${SHADERS_DIR} COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADERS_DIR})
 # add_custom_command(
@@ -98,8 +98,16 @@ target_compile_definitions(${TEMPLATE_NAME} PRIVATE "VULKAN_HPP_HANDLE_ERROR_OUT
 #   COMMENT "Compiling Slang Shaders"
 #   VERBATIM
 # )
+# add_custom_command(
+#   COMMAND ./compile.sh
+#   WORKING_DIRECTORY ${SHADER_SOURCES}
+#   DEPENDS ${SHADER_SOURCES}
+#   COMMENT "Compiling Slang Shaders"
+#   VERBATIM
+# )
 # add_custom_target(${SHADER_TARGET} DEPENDS ${SHADERS_DIR}/slang.spv)
 # add_dependencies(${TEMPLATE_NAME} ${SHADER_TARGET})
+
 
 # Assets
 # set (ASSET_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/")

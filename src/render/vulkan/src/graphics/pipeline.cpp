@@ -1,3 +1,4 @@
+
 #include "graphics/pipeline.hpp"
 #include "core/config.hpp"
 #include "core/context.hpp"
@@ -5,128 +6,6 @@
 #include "util/util.hpp"
 
 namespace varicle::render::vulkan {
-
-void create_descriptor_set(VulkanContext& ctx, std::span<Texture> textures) {
-    std::vector<vk::DescriptorSetLayout> layouts(
-        MAX_FRAMES_IN_FLIGHT, ctx.m_descriptor_set_layout
-    );
-    vk::DescriptorSetAllocateInfo alloc_info{
-        .descriptorPool     = ctx.m_descriptor_pool,
-        .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
-        .pSetLayouts        = layouts.data()
-    };
-
-    // This guy here is where we allocate the memory
-    ctx.m_descriptor_sets = ctx.m_device.allocateDescriptorSets(alloc_info);
-
-    // std::println("Descriptor set count: {}", ctx.m_descriptor_sets.size());
-
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        vk::DescriptorBufferInfo buffer_info{
-
-            .buffer = ctx.m_uniform_buffers[i],
-            .offset = 0,
-            .range  = sizeof(UniformBufferObject)
-        };
-
-        // Here we create and array of image views and allocate all of them at
-        // once
-        std::vector<vk::DescriptorImageInfo> image_infos;
-
-        image_infos.reserve(textures.size());
-        for (auto i = 0; i < textures.size(); i++) {
-            image_infos[i] = vk::DescriptorImageInfo{
-                .sampler     = ctx.m_texture_sampler,
-                .imageView   = textures[i].m_image_view,
-                .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-            };
-        }
-
-        std::array<vk::WriteDescriptorSet, 2> descriptor_write
-
-            { { { .dstSet          = ctx.m_descriptor_sets[i],
-                  .dstBinding      = 0,
-                  .dstArrayElement = 0,
-                  .descriptorCount = 1,
-                  .descriptorType  = vk::DescriptorType::eUniformBuffer,
-                  .pBufferInfo     = &buffer_info },
-
-                // This was for a single image
-                // { .dstSet          = ctx.m_descriptor_sets[i],
-                //   .dstBinding      = 1,
-                //   .dstArrayElement = 0,
-                //   .descriptorCount = 1,
-                //   .descriptorType =
-                //       vk::DescriptorType::eCombinedImageSampler,
-                //   .pImageInfo = &image_info }
-
-                // this is now for our array
-                { .dstSet          = ctx.m_descriptor_sets[i],
-                  .dstBinding      = 1,
-                  .dstArrayElement = 0,
-                  .descriptorCount = static_cast<uint32_t>(image_infos.size()),
-                  .descriptorType  = vk::DescriptorType::eSampledImage,
-                  .pImageInfo      = image_infos.data() }
-
-            } };
-
-        ctx.m_device.updateDescriptorSets(descriptor_write, {});
-    }
-}
-
-void create_descriptor_set_layout(VulkanContext& ctx) {
-    /*
-     * Creating a layout for binding
-     */
-    std::array<vk::DescriptorSetLayoutBinding, 2> ubo_layout_bindings{
-        { { .binding         = 0,
-            .descriptorType  = vk::DescriptorType::eUniformBuffer,
-            .descriptorCount = 1,
-            .stageFlags      = vk::ShaderStageFlagBits::eVertex },
-          { .binding         = 1,
-            .descriptorType  = vk::DescriptorType::eCombinedImageSampler,
-            .descriptorCount = 1,
-            .stageFlags      = vk::ShaderStageFlagBits::eFragment } }
-    };
-    vk::DescriptorSetLayoutCreateInfo layout_info{
-        .bindingCount = static_cast<uint32_t>(ubo_layout_bindings.size()),
-        .pBindings    = ubo_layout_bindings.data()
-
-    };
-    ctx.m_descriptor_set_layout =
-        ctx.m_device.createDescriptorSetLayout(layout_info);
-}
-
-void create_descriptor_pool(VulkanContext& ctx) {
-
-    std::array<vk::DescriptorPoolSize, 2> pool_size{
-        { {
-              .type            = vk::DescriptorType::eUniformBuffer,
-              .descriptorCount = MAX_FRAMES_IN_FLIGHT,
-          },
-          {
-              .type            = vk::DescriptorType::eCombinedImageSampler,
-              .descriptorCount = MAX_FRAMES_IN_FLIGHT,
-
-          } }
-    };
-
-    /*
-     * eFreeDescriptorSet allows use to free the descriptor
-     * Inadequate descriptor pools are problems that validation layers man not
-     * catch. Some may throw OutOfPoolMemory others the GPU may resolve it's
-     * self
-     */
-
-    vk::DescriptorPoolCreateInfo pool_info{
-        .flags         = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-        .maxSets       = MAX_FRAMES_IN_FLIGHT,
-        .poolSizeCount = static_cast<uint32_t>(pool_size.size()),
-        .pPoolSizes    = pool_size.data()
-    };
-
-    ctx.m_descriptor_pool = ctx.m_device.createDescriptorPool(pool_info);
-}
 
 vk::ShaderModule
 create_shader_module(const VulkanContext& ctx, const std::vector<char>& code) {
@@ -139,56 +18,189 @@ create_shader_module(const VulkanContext& ctx, const std::vector<char>& code) {
     return shaderModule;
 }
 
-/* Programmable Function Stages
- * Fixed Function Stages
- */
-void create_graphics_pipeline(VulkanContext& ctx) {
+void PipelineCreationSystem::build_descriptors(
+    vk::Device                   device,
+    std::vector<PipelineBundle>& bundles
+) {
 
-    ctx.m_shader_module =
-        create_shader_module(ctx, readFile("shaders/slang.spv"));
-    vk::ShaderModule& shaderModule = ctx.m_shader_module;
+    // Reset trackers
+    m_descriptor_set_count = 0;
+    m_combined_layouts.clear();
+
+    // Creates all set layouts and track layout counts
+    for (auto& bundle : bundles) {
+        bundle.descriptor_set_layout = create_descriptor_set_layout(
+            device, bundle.descriptor_set_layout_bindings
+        );
+    }
+
+    auto pool = calculate_descriptor_pool(device);
+
+    for (auto& bundle : bundles) {
+        bundle.descriptor_sets =
+            create_descriptor_set(device, bundle.descriptor_set_layout, pool);
+        apply_writes(device, create_descriptor_writes(bundle));
+    }
+}
+
+vk::DescriptorSetLayout PipelineCreationSystem::create_descriptor_set_layout(
+    vk::Device                                         device,
+    const std::vector<vk::DescriptorSetLayoutBinding>& layout_binding
+) {
+
+    for (auto& i : layout_binding) {
+        if (m_combined_layouts.contains(i.descriptorType)) {
+            m_combined_layouts[i.descriptorType] += i.descriptorCount;
+        } else {
+            m_combined_layouts[i.descriptorType] = i.descriptorCount;
+        }
+    }
+
+    m_descriptor_set_count += 1;
+
+    vk::DescriptorSetLayoutCreateInfo layout_info{
+        .bindingCount = static_cast<uint32_t>(layout_binding.size()),
+        .pBindings    = layout_binding.data()
+    };
+
+    return device.createDescriptorSetLayout(layout_info);
+}
+
+vk::DescriptorPool
+PipelineCreationSystem::calculate_descriptor_pool(vk::Device device) {
+
+    std::vector<vk::DescriptorPoolSize> pool_size{};
+    pool_size.reserve(m_combined_layouts.size());
+
+    uint32_t pool_size_idx = 0;
+    for (auto combined_layout : m_combined_layouts) {
+        pool_size.push_back(
+            { .type            = combined_layout.first,
+              .descriptorCount = combined_layout.second * MAX_FRAMES_IN_FLIGHT }
+        );
+    }
+
+    vk::DescriptorPoolCreateInfo pool_info{
+        .flags         = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+        .maxSets       = MAX_FRAMES_IN_FLIGHT * m_descriptor_set_count,
+        .poolSizeCount = static_cast<uint32_t>(pool_size.size()),
+        .pPoolSizes    = pool_size.data()
+    };
+
+    return device.createDescriptorPool(pool_info);
+}
+
+std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT>
+PipelineCreationSystem::create_descriptor_set(
+    vk::Device              device,
+    vk::DescriptorSetLayout layout,
+    vk::DescriptorPool      pool
+) {
+
+    std::vector<vk::DescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, layout);
+
+    vk::DescriptorSetAllocateInfo alloc_info{
+        .descriptorPool     = pool,
+        .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
+        .pSetLayouts        = layouts.data()
+    };
+
+    // This guy here is where we allocate the memory
+    auto v_sets = device.allocateDescriptorSets(alloc_info);
+    std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT> sets;
+    std::copy(
+        v_sets.begin(), v_sets.begin() + MAX_FRAMES_IN_FLIGHT, sets.begin()
+    );
+
+    return sets;
+}
+
+std::vector<vk::WriteDescriptorSet>
+PipelineCreationSystem::create_descriptor_writes(PipelineBundle& bundle) {
+    std::vector<vk::WriteDescriptorSet> writes;
+
+    for (auto& layout_binding : bundle.descriptor_set_layout_bindings) {
+
+        if (layout_binding.descriptorType ==
+            vk::DescriptorType::eCombinedImageSampler) {
+            for (auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+                writes.push_back(
+                    { .dstSet          = bundle.descriptor_sets[i],
+                      .dstBinding      = layout_binding.binding,
+                      .dstArrayElement = 0,
+                      .descriptorCount = layout_binding.descriptorCount,
+                      .descriptorType  = layout_binding.descriptorType,
+                      .pImageInfo      = bundle.descriptor_images.data() }
+                );
+        } else if (
+            layout_binding.descriptorType == vk::DescriptorType::eUniformBuffer
+        ) {
+            for (auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+                writes.push_back(
+                    { .dstSet          = bundle.descriptor_sets[i],
+                      .dstBinding      = layout_binding.binding,
+                      .dstArrayElement = 0,
+                      .descriptorCount = layout_binding.descriptorCount,
+                      .descriptorType  = layout_binding.descriptorType,
+                      .pBufferInfo     = bundle.descriptor_buffers.data() }
+                );
+        } else {
+            throw std::runtime_error(
+                "Failed to craete descriptor writes. Descriptor type not "
+                "supported "
+            );
+        }
+    }
+
+    return writes;
+}
+void PipelineCreationSystem::apply_writes(
+    vk::Device                                 device,
+    const std::vector<vk::WriteDescriptorSet>& writes
+) {
+    device.updateDescriptorSets(writes, {});
+}
+
+void PipelineCreationSystem::create_graphics_pipeline(
+    vk::Device      device,
+    PipelineConfig  config,
+    PipelineBundle& bundle
+) {
 
     vk::PipelineShaderStageCreateInfo vert_shader_stageInfo{
         .stage  = vk::ShaderStageFlagBits::eVertex,
-        .module = shaderModule,
-        .pName  = "vertMain"
+        .module = config.vert_shader_module,
+        .pName  = config.vert_entry_point
 
     };
 
     vk::PipelineShaderStageCreateInfo frag_shader_stageInfo{
         .stage  = vk::ShaderStageFlagBits::eFragment,
-        .module = shaderModule,
-        .pName  = "fragMain"
+        .module = config.frag_shader_module,
+        .pName  = config.frag_entry_point
     };
 
     vk::PipelineShaderStageCreateInfo shader_stages[] = {
         vert_shader_stageInfo, frag_shader_stageInfo
     };
 
-    auto binding_description    = Vertex::getBindingDescription();
-    auto attribute_descriptions = Vertex::getAttributeDescriptions();
-
     vk::PipelineVertexInputStateCreateInfo vertex_inputInfo{
-        .vertexBindingDescriptionCount = 1,
-        .pVertexBindingDescriptions    = &binding_description,
+        .vertexBindingDescriptionCount =
+            static_cast<uint32_t>(config.binding_descriptions.size()),
+
+        .pVertexBindingDescriptions = config.binding_descriptions.data(),
+
         .vertexAttributeDescriptionCount =
-            static_cast<uint32_t>(attribute_descriptions.size()),
-        .pVertexAttributeDescriptions = attribute_descriptions.data()
+            static_cast<uint32_t>(config.attribute_descriptions.size()),
+
+        .pVertexAttributeDescriptions = config.attribute_descriptions.data()
     };
 
     vk::PipelineInputAssemblyStateCreateInfo input_assembly{
-        .topology = vk::PrimitiveTopology::eTriangleList
+        .topology = config.topology
     };
 
-    // vk::Viewport viewport{ 0.0f,
-    //                        0.0f,
-    //                        static_cast<float>(ctx.m_swap_chain_extent.width),
-    //                        static_cast<float>(ctx.m_swap_chain_extent.height),
-    //                        0.0f,
-    //                        1.0f };
-    //
-    // vk::Rect2D scissor{ vk::Offset2D{ 0, 0 }, ctx.m_swap_chain_extent };
-
+    // TODO: We will just handle this manual for now
     std::vector<vk::DynamicState> dynamic_states = {
         vk::DynamicState::eViewport, vk::DynamicState::eScissor
     };
@@ -211,24 +223,21 @@ void create_graphics_pipeline(VulkanContext& ctx) {
     vk::PipelineRasterizationStateCreateInfo rasterizer{
         .depthClampEnable        = vk::False,
         .rasterizerDiscardEnable = vk::False,
-        .polygonMode             = vk::PolygonMode::eFill,
-        .cullMode                = vk::CullModeFlagBits::eNone,
-        // .frontFace               = vk::FrontFace::eClockwise,
-        .frontFace       = vk::FrontFace::eCounterClockwise,
-        .depthBiasEnable = vk::False,
-        .lineWidth       = 1.0f
+        .polygonMode             = config.polygon_mode,
+        .cullMode                = config.cull_mode,
+        .frontFace               = config.front_face,
+        .depthBiasEnable         = vk::False,
+        .lineWidth               = 1.0f
     };
 
-    // Anti-aliasing. Not enabled for now
     vk::PipelineMultisampleStateCreateInfo multisampling{
-        .rasterizationSamples = ctx.m_msaa_samples,
-        .sampleShadingEnable  = vk::True,
+        .rasterizationSamples = config.msaa_samples,
+        .sampleShadingEnable  = config.sample_enable,
         .minSampleShading     = 0.2f
-
     };
 
     vk::PipelineColorBlendAttachmentState color_blend_attachment{
-        .blendEnable = vk::False,
+        .blendEnable = config.blending_enabled,
 
         .srcColorBlendFactor = vk::BlendFactor::eSrcAlpha,
         .dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha,
@@ -244,29 +253,28 @@ void create_graphics_pipeline(VulkanContext& ctx) {
     };
 
     vk::PipelineColorBlendStateCreateInfo color_blending{
-        .logicOpEnable   = vk::False,
+        .logicOpEnable   = config.blending_logic_enabled,
         .logicOp         = vk::LogicOp::eCopy,
         .attachmentCount = 1,
         .pAttachments    = &color_blend_attachment
     };
 
     vk::PushConstantRange push_constant_range{
-        .stageFlags = vk::ShaderStageFlagBits::eVertex,
+        .stageFlags = config.push_constant_stage,
         .offset     = 0,
-        .size       = sizeof(glm::mat4)
+        .size       = config.push_constant_range
 
     };
 
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
         .setLayoutCount         = 1,
-        .pSetLayouts            = &ctx.m_descriptor_set_layout,
+        .pSetLayouts            = &bundle.descriptor_set_layout,
         .pushConstantRangeCount = 1,
         .pPushConstantRanges    = &push_constant_range
     };
 
-    ctx.m_pipeline_layout = vk::PipelineLayout(
-        ctx.m_device.createPipelineLayout(pipelineLayoutInfo)
-    );
+   bundle.pipeline_layout =
+        device.createPipelineLayout(pipelineLayoutInfo);
 
     vk::GraphicsPipelineCreateInfo graphics_pipeline_create_info{
         .stageCount          = 2,
@@ -279,14 +287,14 @@ void create_graphics_pipeline(VulkanContext& ctx) {
         .pDepthStencilState  = &depth_stencil,
         .pColorBlendState    = &color_blending,
         .pDynamicState       = &dynamic_state,
-        .layout              = ctx.m_pipeline_layout,
+        .layout              = bundle.pipeline_layout,
         .renderPass          = nullptr
     };
 
     vk::PipelineRenderingCreateInfo pipeline_rendering_create_info{
         .colorAttachmentCount    = 1,
-        .pColorAttachmentFormats = &ctx.m_swap_chain_surface_format.format,
-        .depthAttachmentFormat   = ctx.m_depth_format
+        .pColorAttachmentFormats = &config.color_format,
+        .depthAttachmentFormat   = config.depth_format
     };
 
     vk::StructureChain<
@@ -295,10 +303,11 @@ void create_graphics_pipeline(VulkanContext& ctx) {
         pipelineCreateInfoChain = { graphics_pipeline_create_info,
                                     pipeline_rendering_create_info };
 
-    auto result = ctx.m_device.createGraphicsPipeline(
+    auto result = device.createGraphicsPipeline(
         nullptr, pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>()
     );
 
-    ctx.m_graphics_pipeline = result.value;
+    bundle.pipeline        = result.value;
 }
+
 } // namespace varicle::render::vulkan

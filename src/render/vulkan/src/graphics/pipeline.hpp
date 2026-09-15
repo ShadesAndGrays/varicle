@@ -1,89 +1,143 @@
-#include "graphics/resource.hpp"
+#include <core/config.hpp>
 #include <core/context.hpp>
+#include <unordered_map>
 
 namespace varicle::render::vulkan {
-
-void create_descriptor_set_layout(VulkanContext& ctx);
-void create_descriptor_pool(VulkanContext& ctx);
-// void create_descriptor_set(VulkanContext& ctx);
-void create_descriptor_set(VulkanContext& ctx, const Texture& texture);
-
-void create_graphics_pipeline(VulkanContext& ctx);
 
 [[nodiscard]] vk::ShaderModule
 create_shader_module(const VulkanContext& ctx, const std::vector<char>& code);
 
-class PipelineBuilder {
-
-  private:
-    // vk::PipelineDynamicStateCreateInfo m_dynmaic_state_create_info{
-    //
-    // };
-    //
-    vk::Format m_color_format;
-    vk::Format m_depth_format;
-
-    vk::ShaderModule m_frag_shader_module;
-    vk::ShaderModule m_vert_shader_module;
-    std::string      m_frag_entry_point;
-    std::string      m_vert_entry_point;
-
-    std::vector<vk::VertexInputBindingDescription>   m_binding_descriptions;
-    std::vector<vk::VertexInputAttributeDescription> m_attribute_descriptions;
-
-    vk::PrimitiveTopology m_topology = vk::PrimitiveTopology::eTriangleList;
-
-    vk::PolygonMode      m_polygon_mode = vk::PolygonMode::eFill;
-    vk::CullModeFlagBits m_cull_mode    = vk::CullModeFlagBits::eFront;
-    vk::FrontFace        m_front_face   = vk::FrontFace::eClockwise;
-
-    vk::Bool32 m_sample_enable;
-    vk::SampleCountFlagBits m_msaa_samples;
-
-    vk::Bool32 m_blending_enabled = vk::False;
-    vk::Bool32 m_blending_logic_enabled = vk::False;
-    // vk::PipelineRenderingCreateInfo m_pipeline_rendering_create_info {}
+struct PipelineConfig {
 
   public:
-    PipelineBuilder();
-    PipelineBuilder&
-    set_vert_shader(vk::ShaderModule shader_module, std::string entry_point);
+    vk::Format color_format = vk::Format::eR32G32B32A32Sfloat;
+    vk::Format depth_format = vk::Format::eD32Sfloat;
 
-    PipelineBuilder&
-    set_frag_shader(vk::ShaderModule shader_module, std::string entry_point);
+    vk::ShaderModule frag_shader_module;
+    vk::ShaderModule vert_shader_module;
+    const char*      frag_entry_point = "main";
+    const char*      vert_entry_point = "main";
 
-    PipelineBuilder& set_vertex_input_info(
-        std::vector<vk::VertexInputBindingDescription>   binding_descriptions,
-        std::vector<vk::VertexInputAttributeDescription> attribute_descriptions
-    );
+    std::vector<vk::VertexInputBindingDescription>   binding_descriptions;
+    std::vector<vk::VertexInputAttributeDescription> attribute_descriptions;
 
-    PipelineBuilder&
-    set_pipeline_rendering(vk::Format color_format, vk::Format depth_format);
+    vk::PrimitiveTopology topology = vk::PrimitiveTopology::eTriangleList;
 
-    PipelineBuilder& set_topology(vk::PrimitiveTopology topology);
+    vk::PolygonMode      polygon_mode = vk::PolygonMode::eFill;
+    vk::CullModeFlagBits cull_mode    = vk::CullModeFlagBits::eFront;
+    vk::FrontFace        front_face   = vk::FrontFace::eClockwise;
 
-    PipelineBuilder& set_rasterizer(
-        vk::PolygonMode      polygon_mode,
-        vk::CullModeFlagBits cull_mode,
-        vk::FrontFace        front_face
-    );
+    vk::Bool32              sample_enable = vk::False;
+    vk::SampleCountFlagBits msaa_samples  = vk::SampleCountFlagBits::e1;
 
-    PipelineBuilder& set_multisampling(
-        bool                    enable,
-        vk::SampleCountFlagBits samples_flags = vk::SampleCountFlagBits::e1
-    );
+    vk::Bool32 blending_enabled       = vk::False;
+    vk::Bool32 blending_logic_enabled = vk::False;
 
-    PipelineBuilder& set_blending(
-        bool                    enable,
-        bool                    logic_enable
-    );
-
-    PipelineBuilder& set_push_constant_size(
-        bool                    enable,
-        bool                    logic_enable
-    );
-
-
-    vk::Pipeline build(vk::Device& device, vk::PipelineLayout layout);
+    uint32_t                push_constant_range = sizeof(float);
+    vk::ShaderStageFlagBits push_constant_stage =
+        vk::ShaderStageFlagBits::eVertex;
 };
+
+// This will containt one pipeline and a descriptor set per frame
+// It has its layout and and array of layout binding
+struct PipelineBundle {
+    // All other members are generated from layout bindings
+    // buffers and images should are copied
+
+    PipelineBundle(
+        std::vector<vk::DescriptorSetLayoutBinding> layout_bindings,
+        std::vector<vk::DescriptorImageInfo>        associated_images,
+        std::array<std::vector<vk::DescriptorBufferInfo>, MAX_FRAMES_IN_FLIGHT>
+            associated_buffers
+    )
+        : descriptor_set_layout_bindings(layout_bindings),
+          descriptor_images(associated_images)
+
+    {}
+
+    PipelineBundle(const PipelineBundle&)            = delete;
+    PipelineBundle& operator=(const PipelineBundle&) = delete;
+
+    PipelineBundle(PipelineBundle&&)            = default;
+    PipelineBundle& operator=(PipelineBundle&&) = default;
+
+    // Descriptors Attributes
+    std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT> descriptor_sets;
+    vk::DescriptorSetLayout                             descriptor_set_layout;
+    std::vector<vk::DescriptorSetLayoutBinding> descriptor_set_layout_bindings;
+    std::vector<vk::DescriptorImageInfo>        descriptor_images;
+    std::vector<vk::DescriptorBufferInfo>       descriptor_buffers;
+
+    // Pipeline Attributes
+    vk::Pipeline       pipeline;
+    vk::PipelineLayout pipeline_layout;
+};
+
+// A more stateful approach to pipeline creation
+class PipelineCreationSystem {
+
+    /*
+     * Clear system state
+
+     * Add Layout binding for set - increments the set
+     * Run Create Layout - Creates all layouts from bindings
+
+     * Run Create Pool - Create pool using aggregated binding infromatino
+
+     // To complex to automate here
+     * Run Create Sets - Use layout and pool to create sets
+
+     * Create Pipeline bundle
+     * Destroy Layouts
+     * (Optional) Destroy pool if no longer needed
+     * Return Pipeline Bundle containing Pipeline and Descriptor Set
+     */
+
+  private:
+    // For pool creation
+    // The total number of descriptor sets for single frame
+    uint32_t m_descriptor_set_count;
+    // A combination of all layouts
+    std::unordered_map<vk::DescriptorType, uint32_t> m_combined_layouts;
+
+  public:
+    void create_graphics_pipeline(
+        vk::Device      device,
+        PipelineConfig  config,
+        PipelineBundle& bundle
+    );
+
+    // Inplace create descriptors bundles. Each bundle should have the layout
+    // binding and is associates image or buffer
+    void
+    build_descriptors(vk::Device device, std::vector<PipelineBundle>& bundles);
+
+  private:
+    // add bindings to combined layout set
+    // increment descriptor_set_count by 1
+    // User should take layout bundle it
+    vk::DescriptorSetLayout create_descriptor_set_layout(
+        vk::Device                                         device,
+        const std::vector<vk::DescriptorSetLayoutBinding>& layout_binding
+    );
+
+    // This uses information tracked by create_descriptor_set_layout to create a
+    // pool
+    vk::DescriptorPool calculate_descriptor_pool(vk::Device device);
+
+    std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT> create_descriptor_set(
+        vk::Device              device,
+        vk::DescriptorSetLayout layout,
+        vk::DescriptorPool      pool
+    );
+
+    std::vector<vk::WriteDescriptorSet>
+    create_descriptor_writes(PipelineBundle& bundle);
+
+    void apply_writes(
+        vk::Device                                 device,
+        const std::vector<vk::WriteDescriptorSet>& writes
+    );
+};
+
 } // namespace varicle::render::vulkan

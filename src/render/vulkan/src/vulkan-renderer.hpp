@@ -1,52 +1,58 @@
 #pragma once
 #include "common.hpp"
 #include "graphics/resource-manager.hpp"
+#include <optional>
 #include <vulkan/vulkan.hpp>
 
 namespace varicle::render::vulkan {
 
-class VulkanRenderer : public IRender {
+class VulkanRenderer {
 
   public:
-    void init(Window& window) override;
+    void init(
+        uint32_t    width  = 800,
+        uint32_t    height = 600,
+        const char* title  = "Varicle"
+    );
 
-    void shutdown() override;
+    void shutdown();
 
-    void begin_frame(bool clear_screen = true) override;
-    void set_clear_color(Color background) override;
+    void begin_frame(bool clear_screen = true);
+    void set_clear_color(Color background);
+    void end_frame();
 
-    void end_frame() override;
+    void resize(uint32_t width, uint32_t height);
+    bool should_close_window();
 
-    void resize(uint32_t width, uint32_t height) override;
+    TextureHandle load_texture(const char* filepath);
+    void          destroy_texture(TextureHandle texture);
 
-    TextureHandle load_texture(const char* filepath) override;
-    void          destroy_texture(TextureHandle texture) override;
+    TextureHandle load_mesh(const char* filepath);
+    void          destroy_mesh(MeshHandle mesh);
 
-    TextureHandle load_mesh(const char* filepath) override;
-    void          destroy_mesh(MeshHandle mesh) override;
+    void draw_rect(const Rect& rect, const Color& color);
 
-    void draw_rect(const Rect& rect, const Color& color) override;
-
-    void draw_object(Object object) override;
-
-    void draw_mesh(MeshHandle mesh) override;
-
-    void draw_v_cube();
+    void draw_object(Object object);
 
     void draw_texured_rect(
         const Rect&   rect,
         TextureHandle texture,
         const Color&  tint = { 1, 1, 1, 1 }
-    ) override {}
+    ) {}
 
-    void    set_camera(Camera camera) override;
-    Camera& get_camera() override;
+    void    set_camera(Camera camera);
+    Camera& get_camera();
+
+    float get_aspect() {
+        return m_window.get_aspect();
+    }
 
   private:
     struct Impl;
-    ResourceManager resource_manager;
+    ResourceManager m_resource_manager;
     Impl*           impl = nullptr;
-    Camera          camera;
+    Camera          m_camera; // Default camera
+    Window          m_window;
 };
 
 } // namespace varicle::render::vulkan

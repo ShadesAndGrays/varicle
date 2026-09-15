@@ -18,6 +18,7 @@ class Window {
     std::tuple<int, int> size();
 
     bool  should_close_window();
+
     float get_aspect();
     ~Window() {
         glfwDestroyWindow(m_window);

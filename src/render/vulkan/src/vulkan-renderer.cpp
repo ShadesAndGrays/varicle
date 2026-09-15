@@ -10,60 +10,104 @@
 #include "graphics/image.hpp"
 #include "graphics/pipeline.hpp"
 #include "graphics/resource.hpp"
+#include "util/util.hpp"
 #include <chrono>
+#include <memory>
 #include <print>
 
 // const char* TEXTURE_PATH = "textures/cube.png";
 using namespace varicle::render;
 using namespace varicle::render::vulkan;
 
-MeshHandle    RECTANGLE;
-TextureHandle DEFAULT_TEXTURE;
+MeshHandle                      RECTANGLE;
+TextureHandle                   DEFAULT_TEXTURE;
+std::unique_ptr<PipelineBundle> default_pipeline_bundle;
 
-void VulkanRenderer ::init(Window& window) {
+void VulkanRenderer ::init(uint32_t width, uint32_t height, const char* title) {
     impl = new Impl{};
 
     std::println("VulkanRender: Initializing Vulkan");
 
     VulkanContext& ctx = impl->v_context;
-    // init_window(ctx, width, height, window_name);
+    m_window.init(width, height, title);
+
     create_instance(ctx);
     if (enable_validation_layers)
         debug::setupDebugMessenger(ctx);
-    create_surface(ctx, window);
+    create_surface(ctx, m_window);
 
     select_physical_device(ctx);
     create_logical_device(ctx);
     create_swap_chain(ctx);
     create_image_views(ctx);
-    create_descriptor_set_layout(ctx);
+    create_texture_sampler(ctx);
+    // create_descriptor_set_layout(ctx);
     create_command_pool(ctx);
     create_color_resources(ctx);
     create_depth_resources(ctx);
-    create_graphics_pipeline(ctx);
 
-    // TODO: Add Bindless texture
-    DEFAULT_TEXTURE = resource_manager.load_texture(ctx, "textures/cube.png");
-    create_texture_sampler(ctx);
+    DEFAULT_TEXTURE = m_resource_manager.load_texture(ctx, "textures/cube.png");
     create_uniform_buffer(ctx);
-    create_descriptor_pool(ctx);
-    create_descriptor_set(
-        ctx, resource_manager.get_texture(ctx, DEFAULT_TEXTURE)
+    auto& texture = m_resource_manager.get_texture(ctx, DEFAULT_TEXTURE);
+
+    auto shader_module =
+        create_shader_module(ctx, readFile("shaders/slang.spv"));
+
+    PipelineConfig pipeline_config{
+        .color_format       = ctx.m_swap_chain_surface_format.format,
+        .depth_format       = ctx.m_depth_format,
+        .frag_shader_module = shader_module,
+        .vert_shader_module = shader_module,
+        .frag_entry_point   = "fragMain",
+        .vert_entry_point   = "vertMain",
+        // TODO: Use ranges instead of vectors
+        .binding_descriptions   = Vertex::getBindingDescriptions(),
+        .attribute_descriptions = Vertex::getAttributeDescriptions(),
+        .msaa_samples           = vk::SampleCountFlagBits::e8,
+        .push_constant_range    = sizeof(glm::mat4),
+
+    };
+    PipelineCreationSystem                      pc_system;
+    std::vector<vk::DescriptorSetLayoutBinding> layout_bindings = {
+        vk::DescriptorSetLayoutBinding{
+            0,
+            vk::DescriptorType::eCombinedImageSampler,
+            1,
+            vk::ShaderStageFlagBits::eFragment }
+    };
+    std::vector<PipelineBundle> bundles;
+    bundles.push_back(
+        PipelineBundle(layout_bindings, { texture.m_descriptor_image_info }, {})
     );
+
+    pc_system.build_descriptors(ctx.m_device, bundles);
+    pc_system.create_graphics_pipeline(
+        ctx.m_device, pipeline_config, bundles[0]
+    );
+
+    default_pipeline_bundle =
+        std::make_unique<PipelineBundle>(std::move(bundles[0]));
+
+    // // TODO: Add Bindless texture
+
+    // create_descriptor_pool(ctx);
+    // create_descriptor_set(
+    //     ctx, m_resource_manager.get_texture(ctx, DEFAULT_TEXTURE)
+    // );
     create_command_buffers(ctx);
     create_sync_objects(ctx);
 
-    Mesh rectangle(
-        { { { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
-          { { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
-          { { 0.5f, 0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-          { { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } } },
-        { 0, 1, 2, 2, 3, 0 }
-    );
-
-    create_vertex_buffer(ctx, rectangle);
-    create_index_buffer(ctx, rectangle);
-    RECTANGLE = resource_manager.add_mesh(ctx, std::move(rectangle));
+    // Mesh rectangle(
+    //     { { { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+    //       { { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+    //       { { 0.5f, 0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+    //       { { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } } },
+    //     { 0, 1, 2, 2, 3, 0 }
+    // );
+    //
+    // create_vertex_buffer(ctx, rectangle);
+    // create_index_buffer(ctx, rectangle);
+    // RECTANGLE = m_resource_manager.add_mesh(ctx, std::move(rectangle));
     // std::println("mesh handle {}",Rectangle);
 }
 
@@ -75,6 +119,11 @@ void VulkanRenderer::resize(uint32_t width, uint32_t height) {
     auto& ctx  = impl->v_context;
     ctx.width  = width;
     ctx.height = height;
+    glfwSetWindowSize(m_window.get_window(), width, height);
+}
+
+bool varicle::render::vulkan::VulkanRenderer::should_close_window() {
+    return glfwWindowShouldClose(m_window.get_window());
 }
 
 void VulkanRenderer::shutdown() {
@@ -98,8 +147,8 @@ void VulkanRenderer::shutdown() {
 
     ctx.m_device.destroyDescriptorPool(ctx.m_descriptor_pool);
 
-    resource_manager.unload_all_meshes(ctx);
-    resource_manager.unload_all_texures(ctx);
+    m_resource_manager.unload_all_meshes(ctx);
+    m_resource_manager.unload_all_texures(ctx);
     ctx.m_device.destroySampler(ctx.m_texture_sampler);
     // images
     // ctx.m_device.destroyImageView(ctx.m_texture_image_view);
@@ -277,7 +326,9 @@ void VulkanRenderer::begin_frame(bool clear_screen) {
     };
 
     cmd.beginRendering(rendering_info);
-    cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, ctx.m_graphics_pipeline);
+    cmd.bindPipeline(
+        vk::PipelineBindPoint::eGraphics, default_pipeline_bundle->pipeline
+    );
 
     cmd.setViewport(
         0,
@@ -358,24 +409,24 @@ void VulkanRenderer::end_frame() {
 }
 TextureHandle VulkanRenderer::load_texture(const char* filepath) {
     auto& ctx = impl->v_context;
-    return resource_manager.load_texture(ctx, filepath);
+    return m_resource_manager.load_texture(ctx, filepath);
 }
 
 void VulkanRenderer::destroy_texture(TextureHandle texture) {
     auto& ctx = impl->v_context;
-    resource_manager.unload_texture(ctx, texture);
+    m_resource_manager.unload_texture(ctx, texture);
 }
 
 TextureHandle VulkanRenderer::load_mesh(const char* filepath) {
 
     auto& ctx = impl->v_context;
-    return resource_manager.load_mesh(ctx, filepath);
+    return m_resource_manager.load_mesh(ctx, filepath);
 };
 
 void VulkanRenderer::destroy_mesh(MeshHandle mesh) {
 
     auto& ctx = impl->v_context;
-    resource_manager.unload_mesh(ctx, mesh);
+    m_resource_manager.unload_mesh(ctx, mesh);
 };
 
 void VulkanRenderer::draw_rect(const Rect& rect, const Color& color) {
@@ -398,14 +449,13 @@ void VulkanRenderer::draw_rect(const Rect& rect, const Color& color) {
         0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4
     };
 
-    // cmd.
 }
 
 void VulkanRenderer::draw_object(Object object) {
 
     auto& ctx = impl->v_context;
 
-    auto& mesh = resource_manager.get_mesh(ctx,object.mesh);
+    auto& mesh = m_resource_manager.get_mesh(ctx, object.mesh);
     auto  cmd  = ctx.get_current_command_buffer();
 
     static auto start_time   = std::chrono::high_resolution_clock::now();
@@ -415,29 +465,16 @@ void VulkanRenderer::draw_object(Object object) {
     )
                      .count();
 
-    glm::mat4 mvp = camera.get_projection_matix() * camera.get_view_matrix() *
-        object.get_model_matrix();
+    glm::mat4 mvp = m_camera.get_projection_matix() *
+        m_camera.get_view_matrix() * object.get_model_matrix();
 
-    // auto& cmd = ctx.get_current_command_buffer();
     cmd.pushConstants(
-        ctx.m_pipeline_layout,
+        default_pipeline_bundle->pipeline_layout,
         vk::ShaderStageFlagBits::eVertex,
         0,
         sizeof(glm::mat4),
         &mvp
     );
-
-    // update_uniform_buffer(
-    //     ctx,
-    //     Object{
-    //         .position = position,
-    //         .rotation = rotation,
-    //         .scale    = scale,
-    //         .mesh     = mesh_handle,
-    //         .texture  = texture,
-    //         .material = material,
-    //     },
-    //     camera
     // );
 
     cmd.bindVertexBuffers(0, mesh.m_vertex_buffer, { 0 });
@@ -450,36 +487,9 @@ void VulkanRenderer::draw_object(Object object) {
 
     cmd.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics,
-        ctx.m_pipeline_layout,
+        default_pipeline_bundle->pipeline_layout,
         0,
-        ctx.m_descriptor_sets[ctx.m_frame_index],
-        nullptr
-    );
-
-    cmd.drawIndexed(static_cast<uint32_t>(mesh.m_indices.size()), 1, 0, 0, 0);
-}
-
-void VulkanRenderer::draw_mesh(MeshHandle mesh_handle) {
-    auto& ctx = impl->v_context;
-
-    auto& mesh = resource_manager.get_mesh(ctx, mesh_handle);
-    auto  cmd  = ctx.get_current_command_buffer();
-
-    // update_uniform_buffer(ctx);
-
-    cmd.bindVertexBuffers(0, mesh.m_vertex_buffer, { 0 });
-
-    cmd.bindIndexBuffer(
-        mesh.m_index_buffer,
-        0,
-        vk::IndexTypeValue<decltype(mesh.m_indices)::value_type>::value
-    );
-
-    cmd.bindDescriptorSets(
-        vk::PipelineBindPoint::eGraphics,
-        ctx.m_pipeline_layout,
-        0,
-        ctx.m_descriptor_sets[ctx.m_frame_index],
+        default_pipeline_bundle->descriptor_sets[ctx.m_frame_index],
         nullptr
     );
 
@@ -490,51 +500,5 @@ void VulkanRenderer::set_camera(Camera camera) {
     camera = camera;
 };
 Camera& VulkanRenderer::get_camera() {
-    return camera;
+    return m_camera;
 };
-
-// GLFWwindow* VulkanRenderer::get_window() {
-//     auto& ctx = impl->v_context;
-//     return ctx.m_window;
-// }
-
-// const std::vector<Vertex> vertices{
-//     { { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
-//     { { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
-//     { { 0.5f, 0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-//     { { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
-//
-//     { { -0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
-//     { { 0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
-//     { { 0.5f, 0.5f, -0.5f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-//     { { -0.5f, 0.5f, -0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
-// };
-//
-// const std::vector<uint16_t> indices = {
-//     0, 1, 2, 2, 3, 0 ,4 , 5 ,6  , 6 ,7 , 4};
-
-// void VulkanRenderer::draw_v_cube() {
-//     auto&             ctx = impl->v_context;
-//     auto cmd = ctx.get_current_command_buffer();
-//
-//     cmd.bindVertexBuffers(0, ctx.m_vertex_buffer, { 0 });
-//
-//     cmd.bindIndexBuffer(
-//         ctx.m_index_buffer,
-//         0,
-//         vk::IndexTypeValue<decltype(ctx.indices)::value_type>::value
-//     );
-//
-//
-//     cmd.bindDescriptorSets(
-//         vk::PipelineBindPoint::eGraphics,
-//         ctx.m_pipeline_layout,
-//         0,
-//         ctx.m_descriptor_sets[ctx.m_frame_index],
-//         nullptr
-//     );
-//     cmd.drawIndexed(static_cast<uint32_t>(ctx.indices.size()), 1, 0, 0, 0);
-//
-//     update_uniform_buffer(ctx);
-//
-//   }

@@ -15,13 +15,14 @@ struct Vertex {
     glm::vec3 color;
     glm::vec2 tex_coord;
 
-    static vk::VertexInputBindingDescription getBindingDescription() {
-        return { .binding   = 0,
-                 .stride    = sizeof(Vertex),
-                 .inputRate = vk::VertexInputRate::eVertex };
+    static std::vector<vk::VertexInputBindingDescription>
+    getBindingDescriptions() {
+        return { { .binding   = 0,
+                   .stride    = sizeof(Vertex),
+                   .inputRate = vk::VertexInputRate::eVertex } };
     }
 
-    static std::array<vk::VertexInputAttributeDescription, 3>
+    static std::vector<vk::VertexInputAttributeDescription>
     getAttributeDescriptions() {
         return { {
             { .location = 0,
@@ -76,10 +77,11 @@ struct UniformBufferObject {
 
 struct Texture {
 
-    uint32_t         m_mip_levels   = 0;
-    vk::Image        m_image        = nullptr;
-    vk::ImageView    m_image_view   = nullptr;
-    vk::DeviceMemory m_image_memory = nullptr;
+    uint32_t                m_mip_levels   = 0;
+    vk::Image               m_image        = nullptr;
+    vk::ImageView           m_image_view   = nullptr;
+    vk::DeviceMemory        m_image_memory = nullptr;
+    vk::DescriptorImageInfo m_descriptor_image_info{};
 
     Texture()  = default;
     ~Texture() = default;
@@ -102,10 +104,9 @@ struct Mesh {
     vk::Buffer m_vertex_buffer = nullptr; // interface for memory
     vk::Buffer m_index_buffer  = nullptr; // interface for memory
 
-    // acutal memory on the gpu
+    // memory on the gpu
     vk::DeviceMemory m_vertex_buffer_memory = nullptr; // actually memory
     vk::DeviceMemory m_index_buffer_memory  = nullptr; // actually memory
-                                                       //
 
     Mesh()  = default;
     ~Mesh() = default;
@@ -129,7 +130,6 @@ struct Material {
     vk::DescriptorPool             m_descriptor_pool       = nullptr;
     std::vector<vk::DescriptorSet> m_descriptor_sets;
 };
-
 
 } // namespace varicle::render::vulkan
 

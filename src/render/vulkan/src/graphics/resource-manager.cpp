@@ -306,6 +306,12 @@ ResourceManager::load_texture_data(VulkanContext& ctx, const char* path) {
         texture.m_mip_levels
     );
 
+    texture.m_descriptor_image_info = {
+        .sampler     = ctx.m_texture_sampler,
+        .imageView   = texture.m_image_view,
+        .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+    };
+
     return texture;
 }
 

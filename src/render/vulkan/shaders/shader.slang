@@ -26,8 +26,8 @@ struct VSOutput {
     float2 fragTexCoord;
 };
 
-[[vk::binding(0)]] ConstantBuffer<UniformBuffer> ubo;
-[[vk::binding(1)]] Sampler2D texture;
+// [[vk::binding(0)]] ConstantBuffer<UniformBuffer> ubo;
+[[vk::binding(0)]] Sampler2D v_texture;
 
 
 
@@ -43,6 +43,6 @@ VSOutput vertMain(VSInput input) {
 [shader("fragment")]
 float4 fragMain(VSOutput vertIn): SV_Target
 {
-    float3 result =  vertIn.color * texture.Sample(vertIn.fragTexCoord).rgb;
+    float3 result =  vertIn.color * v_texture.Sample(vertIn.fragTexCoord).rgb;
     return float4(result,1.0);
 }
