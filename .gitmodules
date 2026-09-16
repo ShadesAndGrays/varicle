@@ -1,4 +1,0 @@
-[submodule "vendor/asset-packer"]
-	path = vendor/asset-packer
-	url = git@github.com:ShadesAndGrays/Asset-Packer.git
-    shallow = true
