@@ -1,0 +1,52 @@
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+
+# --- Indentation & Width (Tuned for Split Screen) ---
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 80
+
+# --- Aggressive Vertical Breaking Without Deep Indentation ---
+AlignAfterOpenBracket: BlockIndent
+AlignOperands: DontAlign
+BinPackArguments: false
+BinPackParameters: false
+AllowAllParametersOfDeclarationOnNextLine: false
+
+# --- Alignment & Visual Layout ---
+PointerAlignment: Left
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+AlignEscapedNewlines: Left
+
+# --- Braces & Control Statements ---
+Cpp11BracedListStyle: false
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: false
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  BeforeElse: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+
+# --- Disallow Single-Line Blocks ---
+AllowShortBlocksOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# --- Reduced Penalties ---
+PenaltyBreakAssignment: 0
+PenaltyBreakBeforeFirstCallParameter: 0
+PenaltyBreakComment: 300
+PenaltyBreakTemplateDeclaration: 0
+PenaltyBreakString: 1000
+PenaltyExcessCharacter: 1000
