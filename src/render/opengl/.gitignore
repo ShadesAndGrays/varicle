@@ -1,0 +1,15 @@
+# output
+build/
+build-*/
+dist/
+bin/
+debug/
+
+# artifacts
+compile_commands.json
+.build_cache.json
+imgui.ini
+data.dat
+.cache/
+.vscode/
+*.exe
