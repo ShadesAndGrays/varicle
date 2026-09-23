@@ -21,12 +21,7 @@ file(GLOB SRC src/*.cpp)
 target_sources(${TARGET}
     PRIVATE
     ${CMAKE_SOURCE_DIR}/vendor/glad/src/glad.c
-    src/lib.cpp
-    src/camera.cpp
-    src/shader.cpp
-    src/transform.cpp
-
-    # ${SRC}
+    ${SRC}
 )
 
 target_compile_definitions(${TARGET}

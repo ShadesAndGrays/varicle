@@ -20,4 +20,5 @@ struct Object {
     glm::mat4 get_model_matrix() const;
 };
 
+
 } // namespace varicle::renderer

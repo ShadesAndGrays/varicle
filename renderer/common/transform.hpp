@@ -3,7 +3,8 @@
 #include <glm/ext.hpp>
 #include <glm/glm.hpp>
 
-namespace varicle::renderer::opengl {
+namespace varicle::renderer {
+
 struct Transform {
     float position[3];
     float scale[3];

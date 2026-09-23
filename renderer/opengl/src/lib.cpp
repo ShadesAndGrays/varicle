@@ -1,3 +1,6 @@
+#include "renderer/common/transform.hpp"
+#include "renderer/common/vertex.hpp"
+
 #include "vendor/glad/include/glad/glad.h"
 
 // #include "renderer/opengl/transform.hpp"
@@ -20,6 +23,7 @@
 
 namespace varicle::renderer::opengl {
 
+float          y_rotation            = 0;
 constexpr char default_vert_shader[] = R"(
 #version 330 core
 
@@ -36,12 +40,15 @@ void main(){
 
 constexpr char default_frag_shader[] = R"(
 #version 330 core
-out vec4 FragColor; in vec2 uv;
+
+out vec4 FragColor;
+in vec2 uv;
 
 uniform sampler2D u_diffuse;
-uniform vec4 u_color;
+uniform vec4 u_color = vec4(1.0f);
 
-void main(){FragColor = u_color;
+void main(){
+    FragColor = u_color;
 })";
 
 using std::println;
@@ -286,7 +293,40 @@ void load_default_shader(GLContext& ctx) {
         exit(-1);
     }
 
-    ctx.Shaders[0] = result.value();
+    ctx.Shaders.push_back(result.value());
+}
+void load_primitives(GLContext& ctx) {
+
+    constexpr PrimitiveType all_primitives[] = {
+        PrimitiveType::TRIANGLE,
+        PrimitiveType::QUAD,
+        PrimitiveType::TWO_QUAD_CUBE,
+        PrimitiveType::FULLSCREEN_TRIANGLE,
+    };
+    for (uint32_t i = 0; i < static_cast<uint32_t>(PrimitiveType::LAST); i++) {
+        auto mesh =
+            varicle::renderer::get_primitive(static_cast<PrimitiveType>(i));
+        ctx.meshes.push_back(MeshData{ i, mesh.verticies, mesh.indices });
+
+        setup_vertex_data(ctx.meshes[i]);
+    }
+}
+
+void draw_primitive(GLContext& ctx, PrimitiveType primitive) {
+    auto mesh = ctx.meshes[static_cast<int>(primitive)];
+    ctx.Shaders[0].use();
+    ctx.Shaders[0].set("u_color", { 0.4f, 0.3f, 1.0f, 1.0f });
+    ctx.Shaders[0].set(
+        "u_transform",
+        varicle::renderer::get_model_matrix({ .scale = { 1.0f, 1.0f, 1.0f } })
+    );
+    glad_glBindVertexArray(mesh.vao);
+    glad_glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, 0);
+    glad_glBindVertexArray(0);
+}
+
+int get_primitive_mesh(GLContext& ctx, PrimitiveType primitive) {
+    return static_cast<int>(primitive);
 }
 
 GLContext init(Window& window) {
@@ -304,7 +344,7 @@ GLContext init(Window& window) {
         "Successfully loaded Opengl {} {}", GLVersion.major, GLVersion.minor
     );
 
-    const auto [w,h] = window.size(); 
+    const auto [w, h] = window.size();
     glViewport(0, 0, w, h);
 
     glfwSetFramebufferSizeCallback(
@@ -313,17 +353,11 @@ GLContext init(Window& window) {
 
     glad_glEnable(GL_BLEND);
     glad_glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glad_glDisable(GL_CULL_FACE);
+    // glad_glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
 
-    auto quad_mesh = make_quad();
     load_default_shader(ctx);
-
-    // auto result =
-    //     load_shaders_from_file("shaders/vert.glsl", "shaders/frag.glsl");
-    // if (!result.has_value()) {
-    //     println("{}", result.error());
-    //     exit(-1);
-    // }
-    // ctx.Shaders[0] = result.value();
+    load_primitives(ctx);
 
     return std::move(ctx);
 }
@@ -332,13 +366,12 @@ bool should_close(GLContext& ctx) {
     return ctx.window.should_close_window();
 }
 void begin_frame(GLContext& ctx) {
-    const auto& [r,g,b,a] = ctx.clear_color;
-    glad_glClearColor(r,g,b,a);
+    const auto& [r, g, b, a] = ctx.clear_color;
+    glad_glClearColor(r, g, b, a);
     glad_glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void end_frame(GLContext& ctx) {
-
     glfwSwapBuffers(ctx.window.get_window());
     glfwPollEvents();
 }

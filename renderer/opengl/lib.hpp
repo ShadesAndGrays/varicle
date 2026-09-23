@@ -1,19 +1,13 @@
 #pragma once
 
 #include "renderer/common/color.hpp"
+#include "renderer/common/vertex.hpp"
 #include "renderer/common/window.hpp"
 #include "renderer/opengl/shader.hpp"
 #include <cstdint>
 #include <vector>
 
 namespace varicle::renderer::opengl {
-
-struct Vertex {
-    float position[3];
-    float normal[3];
-    float uv[2];
-};
-
 struct MeshData {
     uint32_t              ID;
     std::vector<Vertex>   vertices;
@@ -31,13 +25,13 @@ struct TextureData {
 };
 
 struct GLContext {
-    renderer::Window& window;
-    MeshData          meshes[512];
-    TextureData       Textures[512];
-    Shader            Shaders[512];
+    Window&                  window;
+    std::vector<MeshData>    meshes;
+    std::vector<TextureData> Textures;
+    std::vector<Shader>      Shaders;
 
     GLContext(Window& window) : window(window) {}
-    renderer::Color clear_color = { 1, 1, 1, 1 };
+    Color clear_color = { 1, 1, 1, 1 };
 };
 
 GLContext init(Window& window);
@@ -45,7 +39,8 @@ GLContext init(Window& window);
 bool should_close(GLContext& ctx);
 void begin_frame(GLContext& ctx);
 void end_frame(GLContext& ctx);
+void draw_primitive(GLContext& ctx, PrimitiveType primitive);
 void cleanup(GLContext& ctx);
-void set_clear_color(GLContext& ctx, renderer::Color color);
+void set_clear_color(GLContext& ctx, Color color);
 
 } // namespace varicle::renderer::opengl

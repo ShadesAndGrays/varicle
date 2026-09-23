@@ -22,3 +22,8 @@ target_include_directories(${TARGET}
     PRIVATE
     ${CMAKE_SOURCE_DIR}
 )
+
+target_compile_definitions(${TARGET}
+    PRIVATE
+    GLM_ENABLE_EXPERIMENTAL
+)
