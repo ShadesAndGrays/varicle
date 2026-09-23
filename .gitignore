@@ -8,6 +8,7 @@ web/
 debug/
 
 # artifacts
+.build_cache.json
 compile_commands.json
 imgui.ini
 data.dat
