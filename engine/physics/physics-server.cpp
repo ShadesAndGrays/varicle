@@ -1,7 +1,7 @@
 #include "physics-server.hpp"
 #include "box2d/types.h"
-#include "engine/core/event-bus.hpp"
-#include "engine/core/service-locator.hpp"
+#include "core/event-bus.hpp"
+#include "core/service-locator.hpp"
 // #include "raylib.h"
 
 using namespace varicle::physics;

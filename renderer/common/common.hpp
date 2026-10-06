@@ -1,6 +1,16 @@
 #pragma once
 
-#include <glm/glm.hpp>
+// IWYU pragma: begin_exports
+#include "renderer/common/camera.hpp"
+#include "renderer/common/color.hpp"
+#include "renderer/common/context.hpp"
+#include "renderer/common/handles.hpp"
+#include "renderer/common/object.hpp"
+#include "renderer/common/rect.hpp"
+#include "renderer/common/transform.hpp"
+#include "renderer/common/vertex.hpp"
+#include "renderer/common/window.hpp"
+// IWYU pragma: end_exports
 
 namespace varicle::renderer {
 

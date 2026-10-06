@@ -4,6 +4,8 @@
 
 namespace varicle::renderer {
 
+enum class GraphicsBackend {OpenGL, Vulkan, WebGPU};
+
 class Window {
   private:
     int        m_initial_width;
@@ -13,7 +15,7 @@ class Window {
     GLFWwindow* m_window;
 
   public:
-    Window(int width, int height, const char* title);
+    Window(int width, int height, const char* title, GraphicsBackend backend = GraphicsBackend::OpenGL);
 
     // Window(const Window&)            = delete;
     // Window& operator=(const Window&) = delete;

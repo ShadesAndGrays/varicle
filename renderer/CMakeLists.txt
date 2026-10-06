@@ -8,14 +8,20 @@ add_library(${TARGET} INTERFACE)
 add_library(Varicle::Renderer ALIAS ${TARGET})
 
 add_subdirectory(common renderer/common)
-add_subdirectory(opengl renderer/opengl)
-# add_subdirectory(src/render/vulkan)
+# add_subdirectory(opengl renderer/opengl)
+add_subdirectory(vulkan renderer/vulkan)
 # add_subdirectory(src/render/webgpu)
 
 target_link_libraries(${TARGET}
     INTERFACE
     Varicle::Common
-    Varicle::OpenGL
+    # Varicle::OpenGL
+    Varicle::Vulkan
+)
+
+target_compile_definitions(${TARGET}
+    INTERFACE
+    GLM_ENABLE_EXPERIMENTAL
 )
 
 # target_include_directories(${TARGET}

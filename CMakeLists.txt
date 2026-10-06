@@ -47,7 +47,8 @@ add_library(${TARGET} INTERFACE)
 add_library(Varicle::Varicle ALIAS ${TARGET})
 
 # modules
-add_subdirectory(engine)
+# add_subdirectory(core)
+# add_subdirectory(engine)
 add_subdirectory(renderer)
 
 # target_sources(${PROJECT_NAME}_lib
@@ -63,8 +64,9 @@ target_include_directories(${TARGET} INTERFACE
 )
 
 target_link_libraries(${TARGET} INTERFACE
+    # Varicle::Core
     Varicle::Renderer
-    Varicle::Engine
+    # Varicle::Engine
 )
 
 
@@ -179,7 +181,8 @@ if (BUILD_EXAMPLES)
     # add_subdirectory(examples/physics-server-test)
     # add_subdirectory(examples/event-bus)
     # add_subdirectory(examples/basic-ui)
-    add_subdirectory(examples/opengl-render)
+    # add_subdirectory(examples/opengl-render)
+    add_subdirectory(examples/vulkan-render)
 
 else()
     message(STATUS "Building Examples: Disabled")

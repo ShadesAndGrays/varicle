@@ -1,7 +1,7 @@
 #pragma once
 
-#include "engine/core/engine-variant/engine-variant.hpp"
-#include "engine/util/slot-map.hpp"
+#include "core/engine-variant.hpp"
+#include "core/slot-map.hpp"
 #include <box2d/box2d.h>
 
 namespace varicle::shape {

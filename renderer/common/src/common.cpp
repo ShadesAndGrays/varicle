@@ -1,7 +1,7 @@
 
 #include "renderer/common/common.hpp"
-#include "renderer/common/camera.hpp"
-#include "renderer/common/object.hpp"
+// #include "renderer/common/camera.hpp"
+// #include "renderer/common/object.hpp"
 #include "renderer/common/transform.hpp"
 #include "renderer/common/vertex.hpp"
 #include "renderer/common/window.hpp"
@@ -9,17 +9,30 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/quaternion_transform.hpp>
-#include <print>
+// #include <print>
 
-varicle::renderer::Window::Window(int width, int height, const char* title)
+varicle::renderer::Window::Window(
+    int             width,
+    int             height,
+    const char*     title,
+    GraphicsBackend backend
+)
     : m_initial_width(width), m_initial_height(height),
       m_initial_title(std::move(title)) {
 
     glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
+    if (backend == GraphicsBackend::OpenGL) {
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+
+    } else if (backend == GraphicsBackend::Vulkan) {
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    } else {
+    }
     m_window = glfwCreateWindow(width, height, title, nullptr, nullptr);
 
     glfwMakeContextCurrent(m_window);
@@ -67,8 +80,8 @@ float varicle::renderer::Window::get_aspect() {
 //     return glm::lookAt(position, target, up);
 // }
 
-
-varicle::renderer::Mesh varicle::renderer::get_primitive(varicle::renderer::PrimitiveType type) {
+varicle::renderer::Mesh
+varicle::renderer::get_primitive(varicle::renderer::PrimitiveType type) {
     using namespace varicle::renderer;
 
     switch (type) {
@@ -83,7 +96,7 @@ varicle::renderer::Mesh varicle::renderer::get_primitive(varicle::renderer::Prim
                          { 0.5, -0.5, 0, 0.0, 0.0, 0.0, 0.5, -0.5 },
                          { -0.5, -0.5, 0, 0.0, 0.0, 0.0, -0.5, -0.5 },
                      },
-                     { 0, 1, 2} };
+                     { 0, 1, 2 } };
     case QUAD:
 
         /*
@@ -91,10 +104,8 @@ varicle::renderer::Mesh varicle::renderer::get_primitive(varicle::renderer::Prim
          |   |
          3 --2
          */
-        return Mesh {
-            {
-                       { -0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },
-                       { 0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f},
+        return Mesh{ { { -0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },
+                       { 0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f },
                        { 0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f },
                        { -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f } },
                      { 0, 1, 2, 0, 2, 3 } };
@@ -107,25 +118,20 @@ varicle::renderer::Mesh varicle::renderer::get_primitive(varicle::renderer::Prim
                + z -
 
         back quad */
-        return Mesh{
-            {
-                { -0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0 },
-                { 0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 1.0, 0 },
-                { 0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 1.0, 1.0 },
-                { -0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0 },
+        return Mesh{ {
+                         { -0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0 },
+                         { 0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 1.0, 0 },
+                         { 0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 1.0, 1.0 },
+                         { -0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0 },
 
-                { -0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0 },
-                { 0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0 },
-                { 0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 1.0 },
-                { -0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 1.0 },
-            },
-            {
-                0,1,2, 0,2,3,
-                4,5,6, 4,6,7,
-                1,0,4, 1, 4,5,
-                1,5,6, 1, 6,2,
-                3,2,6, 3, 6,7,
-                4,0,3, 4, 3,7,
+                         { -0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0 },
+                         { 0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0 },
+                         { 0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 1.0 },
+                         { -0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 1.0 },
+                     },
+                     {
+                         0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 1, 0, 4, 1, 4, 5,
+                         1, 5, 6, 1, 6, 2, 3, 2, 6, 3, 6, 7, 4, 0, 3, 4, 3, 7,
                      } };
     case FULLSCREEN_TRIANGLE:
         /*
@@ -138,14 +144,11 @@ varicle::renderer::Mesh varicle::renderer::get_primitive(varicle::renderer::Prim
                      { 3.0, -1.0, 0, 0.0, 0.0, 0.0, 3.0, -1.0 },
                      { -1.0, -1.0, 0, 0.0, 0.0, 0.0, -1.0, -1.0 },
                  },
-                 {0,1,2} };
+                 { 0, 1, 2 } };
     default:
         return {};
     }
-
-
 }
-
 
 glm::mat4 varicle::renderer::get_model_matrix(const Transform& transform) {
 
@@ -169,4 +172,3 @@ glm::mat4 varicle::renderer::get_model_matrix(const Transform& transform) {
 
     return model;
 }
-

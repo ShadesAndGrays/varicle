@@ -1,93 +1,92 @@
 cmake_minimum_required(VERSION 3.29) # module support in version 3.28
 
-set (TEMPLATE_NAME "VulkanRenderer")
+set (TARGET "VaricleVulkan")
 
-project (${TEMPLATE_NAME})
+project (${TARGET})
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS on)
+add_library(${TARGET})
+add_library(Varicle::Vulkan ALIAS ${TARGET})
 
-# target_include_directories(${LIB_TARGET} PRIVATE src)
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
+# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static")
 
-# Add option to enable/disable C++ 20 module
-# option(ENABLE_CPP20_MODULE "Enable C++ 20 module support for Vulkan" OFF)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-# Enable C++ module dependency scanning only if C++ 20 module is enabled
-# if(ENABLE_CPP20_MODULE)
-#   set(CMAKE_CXX_SCAN_FOR_MODULES ON)
-# endif()
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static")
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
-
-# find_package(glfw3 REQUIRED)
-find_package(glm REQUIRED)
-find_package(Vulkan 1.4.335 REQUIRED)
+find_package(glfw3 REQUIRED)
 # find_package(tinyobjloader REQUIRED)
 # find_package(tinygltf REQUIRED)
+
+# find_package(glm REQUIRED)
+find_package(Vulkan 1.4.335 REQUIRED)
 find_package(KTX REQUIRED)
 
-add_library(VaricleVulkan INTERFACE)
-add_library(Varicle::Vulkan ALIAS VaricleVulkan)
-target_link_libraries(VaricleVulkan INTERFACE Vulkan::Vulkan)
-target_compile_definitions(VaricleVulkan
-    INTERFACE
-    VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
-    VULKAN_HPP_NO_STRUCT_CONSTRUCTORS=1
-  )
-
-find_package(stb REQUIRED)
-set(STB_INCLUDEDIR ${stb_INCLUDE_DIRS})
-
-find_program(SLANGC_EXECUTABLE slangc HINTS $ENV{VULKAN_SDK}/bin REQUIRED)
-
-set(TEMPLATE_DIR ${CMAKE_BINARY_DIR}/${TEMPLATE_NAME})
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "" FORCE)
-add_subdirectory(../../../vendor/glfw ${CMAKE_CURRENT_BINARY_DIR}/vendor/glfw )
 
-add_executable (${TEMPLATE_NAME})
-
-target_sources(${TEMPLATE_NAME}
-    PRIVATE
-    src/test.cpp
-    src/vulkan-renderer.cpp
-    src/core/init.cpp
-    src/core/device.cpp
-    src/core/validation.cpp
-    src/core/swap-chain.cpp
-    src/graphics/image.cpp
-    src/graphics/buffer.cpp
-    src/graphics/pipeline.cpp
-    src/graphics/resource-manager.cpp
-    ../common/common.cpp
-)
-
-target_include_directories(${TEMPLATE_NAME}
+target_compile_definitions(${TARGET}
     PUBLIC
-    src
-    ../common
-    ../../../vendor/tinygltf
-    ../../../vendor/tinyobjloader
+    VULKAN_HPP_NO_STRUCT_CONSTRUCTORS=1
+
+    PRIVATE
+    GLFW_INCLUDE_VULKAN
+    VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
+    VULKAN_HPP_HANDLE_ERROR_OUT_OF_DATE_AS_SUCCESS=1
+    GLM_ENABLE_EXPERIMENTAL
+    GLM_FORCE_DEPTH_ZERO_TO_ONE
+    TINYOBJLOADER_IMPLEMENTATION
+    STB_IMAGE_IMPLEMENTATION
+  )
+
+target_link_libraries (${TARGET} PRIVATE Vulkan::Vulkan glfw Varicle::Common)
+
+# find_package(stb REQUIRED)
+# set(STB_INCLUDEDIR ${stb_INCLUDE_DIRS})
+
+# find_program(SLANGC_EXECUTABLE slangc HINTS $ENV{VULKAN_SDK}/bin REQUIRED)
+
+# set(TEMPLATE_DIR ${CMAKE_BINARY_DIR}/${TARGET})
+
+
+
+# add_subdirectory(../../../vendor/glfw ${CMAKE_CURRENT_BINARY_DIR}/vendor/glfw )
+
+# add_executable (${TARGET})
+
+target_sources(${TARGET}
+    PRIVATE
+    # test.cpp
+    lib.cpp
+    core/init.cpp
+    core/device.cpp
+    core/validation.cpp
+    core/swap-chain.cpp
+    graphics/image.cpp
+    graphics/buffer.cpp
+    graphics/pipeline.cpp
+    graphics/resource-manager.cpp
 )
 
-set_target_properties (${TEMPLATE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEMPLATE_DIR})
-set_target_properties (${TEMPLATE_NAME} PROPERTIES CXX_STANDARD 23)
-target_link_libraries (${TEMPLATE_NAME} Varicle::Vulkan glfw )
-target_include_directories (${TEMPLATE_NAME} PRIVATE ${STB_INCLUDEDIR})
+target_include_directories(${TARGET}
+    PUBLIC
+    ${CMAKE_SOURCE_DIR}
+)
+
+# set_target_properties (${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEMPLATE_DIR})
+
+
+
+# target_include_directories (${TARGET} PRIVATE ${STB_INCLUDEDIR})
 
 # Define VULKAN_HPP_HANDLE_ERROR_OUT_OF_DATE_AS_SUCCESS to treat VK_ERROR_OUT_OF_DATE_KHR as a success code
 # We'll handle this personally
-target_compile_definitions(${TEMPLATE_NAME} PRIVATE "VULKAN_HPP_HANDLE_ERROR_OUT_OF_DATE_AS_SUCCESS" )
 
 # Slang shader
-# set (SHADER_TARGET ${TEMPLATE_NAME}Shader)
+# set (SHADER_TARGET ${TARGET}Shader)
 # set (SHADERS_DIR ${TEMPLATE_DIR}/shaders)
-set (SHADER_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shaders/shader.slang")
+# set (SHADER_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shaders/shader.slang")
 # set (ENTRY_POINTS -entry vertMain -entry fragMain)
 # add_custom_command(OUTPUT ${SHADERS_DIR} COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADERS_DIR})
 # add_custom_command(
@@ -106,7 +105,7 @@ set (SHADER_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shaders/shader.slang")
 #   VERBATIM
 # )
 # add_custom_target(${SHADER_TARGET} DEPENDS ${SHADERS_DIR}/slang.spv)
-# add_dependencies(${TEMPLATE_NAME} ${SHADER_TARGET})
+# add_dependencies(${TARGET} ${SHADER_TARGET})
 
 
 # Assets

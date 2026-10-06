@@ -25,6 +25,7 @@ target_include_directories(${TARGET} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/vendor/json>
 
 )
+target_compile_definitions(${TARGET} INTERFACE VARICLE_MODULE_ENGINE)
 
 target_link_libraries(${TARGET} PUBLIC
     box2d
