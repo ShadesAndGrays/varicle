@@ -20,7 +20,8 @@ find_package(glfw3 REQUIRED)
 find_package(Vulkan 1.4.335 REQUIRED)
 find_package(KTX REQUIRED)
 
-add_subdirectory(${CMAKE_SOURCE_DIR}/vendor/slang ${CMAKE_BINARY_DIR}/vendor/slang)
+add_subdirectory(${CMAKE_SOURCE_DIR}/vendor/slang
+    ${CMAKE_BINARY_DIR}/vendor/slang)
 
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -69,11 +70,13 @@ target_sources(${TARGET}
     graphics/buffer.cpp
     graphics/pipeline.cpp
     graphics/resource-manager.cpp
+    util/slang-compiler.cpp
 )
 
 target_include_directories(${TARGET}
     PUBLIC
     ${CMAKE_SOURCE_DIR}
+    ${SLANG_ROOT}/include
 )
 
 message(STATUS root ${SLANG_ROOT})

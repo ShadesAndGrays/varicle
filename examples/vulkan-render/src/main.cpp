@@ -1,5 +1,7 @@
 #include <varicle.hpp>
 
+#include "renderer/vulkan/util/slang-compiler.hpp"
+
 namespace v = varicle::renderer::vulkan;
 
 int main() {
@@ -42,18 +44,22 @@ int main() {
 
     v::PipelineBundle default_bundle({ default_layout_set });
 
-    auto shader_s      = v::read_file("assets/vulkan-shaders/slang.spv");
-    auto shader_module = v::create_shader_module(
-        ctx, std::vector<char>{ shader_s.begin(), shader_s.end() }
+    auto compiled_shaders = compile_shader_code(
+        "assets/vulkan-shaders/shader.slang", { "vertMain", "fragMain" }
     );
+
+    // auto shader_s      = v::read_file("assets/vulkan-shaders/slang.spv");
+    auto shader_v      = compiled_shaders[0].code;
+    auto shader_v_module = v::create_shader_module(ctx, shader_v);
+
+    auto shader_f      = compiled_shaders[1].code;
+    auto shader_f_module = v::create_shader_module(ctx, shader_f);
 
     v::PipelineConfig config{
         .color_format           = ctx.m_swap_chain_surface_format.format,
         .depth_format           = ctx.m_depth_format,
-        .frag_shader_module     = shader_module,
-        .vert_shader_module     = shader_module,
-        .frag_entry_point       = "fragMain",
-        .vert_entry_point       = "vertMain",
+        .frag_shader_module     = shader_f_module,
+        .vert_shader_module     = shader_v_module,
         .binding_descriptions   = v::getBindingDescriptions(),
         .attribute_descriptions = v::getAttributeDescriptions(),
         .msaa_samples           = vk::SampleCountFlagBits::e8,
@@ -61,7 +67,6 @@ int main() {
     };
 
     v::create_graphics_pipeline(ctx.m_device, config, default_bundle);
-
 
     v::MaterialData mat0{ default_layout_set,
                           default_bundle.pipeline_layout,

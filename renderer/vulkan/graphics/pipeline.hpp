@@ -7,7 +7,7 @@
 namespace varicle::renderer::vulkan {
 
 [[nodiscard]] vk::ShaderModule
-create_shader_module(const VulkanContext& ctx, const std::vector<char>& code);
+create_shader_module(const VulkanContext& ctx, const std::vector<uint32_t>& code);
 
 struct PipelineConfig {
 

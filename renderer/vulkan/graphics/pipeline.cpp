@@ -9,11 +9,11 @@ using std::println;
 namespace varicle::renderer::vulkan {
 
 vk::ShaderModule
-create_shader_module(const VulkanContext& ctx, const std::vector<char>& code) {
+create_shader_module(const VulkanContext& ctx, const std::vector<uint32_t>& code) {
 
     vk::ShaderModuleCreateInfo createInfo{
-        .codeSize = code.size() * sizeof(char),
-        .pCode    = reinterpret_cast<const uint32_t*>(code.data())
+        .codeSize = code.size() * sizeof(uint32_t),
+        .pCode    = code.data()
     };
     vk::ShaderModule shaderModule(ctx.m_device.createShaderModule(createInfo));
     return shaderModule;
