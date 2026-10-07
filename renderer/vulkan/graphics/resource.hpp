@@ -146,10 +146,25 @@ struct MeshData {
         : m_vertices(std::move(vertices)), m_indices(std::move(indices)) {}
 };
 
-// This is just a ubo
 struct MaterialData {
 
-    MaterialHandle                 ID;
+    MaterialData(
+        vk::DescriptorSetLayout        descriptor_set_layout,
+        vk::PipelineLayout             pipeline_layout,
+        vk::Pipeline                   graphics_pipeline,
+        std::vector<vk::DescriptorSet> descriptor_sets
+    )
+        : m_descriptor_set_layout(std::move(descriptor_set_layout)),
+          m_graphics_pipeline(std::move(graphics_pipeline)),
+          m_pipeline_layout(std::move(pipeline_layout)),
+          m_descriptor_sets(std::move(descriptor_sets)) {}
+
+    MaterialData(const MaterialData&)            = delete;
+    MaterialData& operator=(const MaterialData&) = delete;
+
+    MaterialData(MaterialData&&)            = default;
+    MaterialData& operator=(MaterialData&&) = default;
+
     vk::DescriptorSetLayout        m_descriptor_set_layout = nullptr;
     vk::PipelineLayout             m_pipeline_layout       = nullptr;
     vk::Pipeline                   m_graphics_pipeline     = nullptr;

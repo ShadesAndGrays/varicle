@@ -366,6 +366,12 @@ MaterialHandle ResourceManager::add_material(
     return static_cast<MeshHandle>(m_textures.size() - 1);
 }
 
+
+//ResourceManager::
+MaterialHandle create_material(VulkanContext& ctx) {
+
+    }
+
 void ResourceManager::unload_material(
     VulkanContext& ctx,
     MaterialHandle material

@@ -9,8 +9,8 @@ namespace varicle::renderer::vulkan {
 
 class ResourceManager {
 
-    std::vector<TextureData> m_textures;
-    std::vector<MeshData>    m_meshes;
+    std::vector<TextureData>  m_textures;
+    std::vector<MeshData>     m_meshes;
     std::vector<MaterialData> m_materials;
 
   public:
@@ -31,7 +31,8 @@ class ResourceManager {
     MaterialData& get_material(MaterialHandle material);
     MaterialHandle
     add_material(vulkan::VulkanContext& ctx, MaterialData&& material);
-    MaterialHandle load_material(VulkanContext& ctx, const char* filepath);
+
+    MaterialHandle create_material(VulkanContext& ctx);
     void           unload_material(VulkanContext& ctx, MaterialHandle material);
     void           unload_all_materials(VulkanContext& ctx);
 

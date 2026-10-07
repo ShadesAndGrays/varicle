@@ -2,6 +2,7 @@
 #include "renderer/vulkan/core/config.hpp"
 #include "renderer/vulkan/core/context.hpp"
 #include <unordered_map>
+#include <vulkan/vulkan.hpp>
 
 namespace varicle::renderer::vulkan {
 
@@ -70,72 +71,77 @@ void create_graphics_pipeline(
     PipelineBundle& bundle
 );
 
-// A more stateful approach to pipeline creation
-class PipelineCreationSystem {
+struct LayoutKeyHash {
+    size_t operator()(
+        const std::vector<vk::DescriptorSetLayoutBinding>& bindings
+    ) const;
+};
 
-    /*
-     * Clear system state
-
-     * Add Layout binding for set - increments the set
-     * Run Create Layout - Creates all layouts from bindings
-
-     * Run Create Pool - Create pool using aggregated binding infromatino
-
-     // To complex to automate here
-     * Run Create Sets - Use layout and pool to create sets
-
-     * Create Pipeline bundle
-     * Destroy Layouts
-     * (Optional) Destroy pool if no longer needed
-     * Return Pipeline Bundle containing Pipeline and Descriptor Set
-     */
-
+class DescriptorLayoutCache {
   private:
-    // For pool creation
-    // The total number of descriptor sets for single frame
-    uint32_t m_descriptor_set_count;
-    // A combination of all layouts
-    std::unordered_map<vk::DescriptorType, uint32_t> m_combined_layouts;
+    std::unordered_map<
+        std::vector<vk::DescriptorSetLayoutBinding>,
+        vk::DescriptorSetLayout,
+        LayoutKeyHash>
+        layout_cache;
 
   public:
-    // void create_graphics_pipeline(
-    //     vk::Device      device,
-    //     PipelineConfig  config,
-    //     PipelineBundle& bundle
-    // );
-
-    // Inplace create descriptors bundles. Each bundle should have the layout
-    // binding and is associates image or buffer
-    void
-    build_descriptors(vk::Device device, std::vector<PipelineBundle>& bundles);
-
-  private:
-    // add bindings to combined layout set
-    // increment descriptor_set_count by 1
-    // User should take layout bundle it
-    // vk::DescriptorSetLayout create_descriptor_set_layout(
-    //     vk::Device                                         device,
-    //     const std::vector<vk::DescriptorSetLayoutBinding>& layout_binding
-    // );
-
-    // This uses information tracked by create_descriptor_set_layout to create a
-    // pool
-    // vk::DescriptorPool calculate_descriptor_pool(vk::Device device);
-
-    // std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT>
-    // create_descriptor_set(
-    //     vk::Device              device,
-    //     vk::DescriptorSetLayout layout,
-    //     vk::DescriptorPool      pool
-    // );
-
-    // std::vector<vk::WriteDescriptorSet>
-    // create_descriptor_writes(PipelineBundle& bundle);
-    //
-    // void apply_writes(
-    //     vk::Device                                 device,
-    //     const std::vector<vk::WriteDescriptorSet>& writes
-    // );
+    vk::DescriptorSetLayout get_or_create_layout(
+        vk::Device                                        device,
+        const std::vector<vk::DescriptorSetLayoutBinding> bindings
+    );
 };
+
+class DescriptorPoolAllocator {
+  private:
+    // some default setting
+    static constexpr int s_maxSets  = 256;
+    static constexpr int s_samplers = 1024;
+    static constexpr int s_buffers  = 256;
+
+    std::vector<vk::DescriptorPool> m_full;
+    vk::DescriptorPool              m_current = nullptr;
+
+  public:
+    void create_new_pool(vk::Device device);
+
+    std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT> create_set(
+        vk::Device                    device,
+        vk::DescriptorPool            pool,
+        vk::DescriptorSetAllocateInfo alloc_info
+    );
+
+    // checks sets is not empty
+    std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT>
+    allocate(vk::Device device, vk::DescriptorSetLayout layout);
+};
+
+class DescriptorWriter {
+  public:
+    void write_buffer(
+        vk::Device                          device,
+        vk::DescriptorSetLayoutBinding      layout_binding,
+        vk::DescriptorSet                   descriptor_set,
+        std::span<vk::DescriptorBufferInfo> buffer_infos,
+        std::uint32_t                       offset = 0
+
+    );
+
+    void write_texture(
+        vk::Device                         device,
+        vk::DescriptorSetLayoutBinding     layout_binding,
+        vk::DescriptorSet                  descriptor_set,
+        std::span<vk::DescriptorImageInfo> image_infos,
+        std::uint32_t                      offset = 0
+    );
+};
+
+struct DescriptorSystem {
+    DescriptorLayoutCache   cache;
+    DescriptorPoolAllocator pool_allocator;
+    DescriptorWriter        writer;
+};
+
+DescriptorSystem create_default_descriptor_system(vk::Device device);
 
 } // namespace varicle::renderer::vulkan

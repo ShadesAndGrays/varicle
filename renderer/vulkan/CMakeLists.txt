@@ -20,6 +20,8 @@ find_package(glfw3 REQUIRED)
 find_package(Vulkan 1.4.335 REQUIRED)
 find_package(KTX REQUIRED)
 
+add_subdirectory(${CMAKE_SOURCE_DIR}/vendor/slang ${CMAKE_BINARY_DIR}/vendor/slang)
+
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -40,7 +42,7 @@ target_compile_definitions(${TARGET}
     STB_IMAGE_IMPLEMENTATION
   )
 
-target_link_libraries (${TARGET} PRIVATE Vulkan::Vulkan glfw Varicle::Common)
+target_link_libraries (${TARGET} PRIVATE Vulkan::Vulkan glfw slang Varicle::Common)
 
 # find_package(stb REQUIRED)
 # set(STB_INCLUDEDIR ${stb_INCLUDE_DIRS})
@@ -74,6 +76,14 @@ target_include_directories(${TARGET}
     ${CMAKE_SOURCE_DIR}
 )
 
+message(STATUS root ${SLANG_ROOT})
+
+
+add_custom_command(TARGET ${TARGET} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${SLANG_RUNTIME_DLLS} $<TARGET_FILE_DIR:${TARGET}>
+)
+#
 # set_target_properties (${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEMPLATE_DIR})
 
 

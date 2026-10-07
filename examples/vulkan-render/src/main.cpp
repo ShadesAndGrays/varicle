@@ -11,7 +11,6 @@ int main() {
     auto rm  = v::create_resource_manager(ctx);
     auto ds  = v::create_descriptor_system(ctx);
     // ds.pool_allocator.create_new_pool(ctx.m_device);
-    println("Loaded system");
 
     const auto DEFAULT_TEXTURE =
         rm.add_texture(std::move(rm.create_default_texture(ctx)));
@@ -63,8 +62,8 @@ int main() {
 
     v::create_graphics_pipeline(ctx.m_device, config, default_bundle);
 
-    v::MaterialData mat0{ 0,
-                          default_layout_set,
+
+    v::MaterialData mat0{ default_layout_set,
                           default_bundle.pipeline_layout,
                           default_bundle.pipeline,
                           std::vector<vk::DescriptorSet>{ sets.begin(),

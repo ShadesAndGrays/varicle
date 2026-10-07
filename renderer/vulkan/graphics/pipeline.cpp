@@ -2,8 +2,9 @@
 #include "renderer/vulkan/graphics/pipeline.hpp"
 #include "renderer/vulkan/core/config.hpp"
 #include "renderer/vulkan/core/context.hpp"
-// #include "renderer/vulkan/graphics/resource.hpp"
-#include "renderer/vulkan/util/util.hpp"
+#include <print>
+
+using std::println;
 
 namespace varicle::renderer::vulkan {
 
@@ -17,149 +18,6 @@ create_shader_module(const VulkanContext& ctx, const std::vector<char>& code) {
     vk::ShaderModule shaderModule(ctx.m_device.createShaderModule(createInfo));
     return shaderModule;
 }
-
-// void PipelineCreationSystem::build_descriptors(
-//     vk::Device                   device,
-//     std::vector<PipelineBundle>& bundles
-// ) {
-//
-//     // Reset trackers
-//     m_descriptor_set_count = 0;
-//     m_combined_layouts.clear();
-//
-//     // Creates all set layouts and track layout counts
-//     for (auto& bundle : bundles) {
-//         bundle.descriptor_set_layout = create_descriptor_set_layout(
-//             device, bundle.descriptor_set_layout_bindings
-//         );
-//     }
-//
-//     auto pool = calculate_descriptor_pool(device);
-//
-//     for (auto& bundle : bundles) {
-//         bundle.descriptor_sets =
-//             create_descriptor_set(device, bundle.descriptor_set_layout, pool);
-//         apply_writes(device, create_descriptor_writes(bundle));
-//     }
-// }
-//
-// vk::DescriptorSetLayout PipelineCreationSystem::create_descriptor_set_layout(
-//     vk::Device                                         device,
-//     const std::vector<vk::DescriptorSetLayoutBinding>& layout_binding
-// ) {
-//
-//     for (auto& i : layout_binding) {
-//         if (m_combined_layouts.contains(i.descriptorType)) {
-//             m_combined_layouts[i.descriptorType] += i.descriptorCount;
-//         } else {
-//             m_combined_layouts[i.descriptorType] = i.descriptorCount;
-//         }
-//     }
-//
-//     m_descriptor_set_count += 1;
-//
-//     vk::DescriptorSetLayoutCreateInfo layout_info{
-//         .bindingCount = static_cast<uint32_t>(layout_binding.size()),
-//         .pBindings    = layout_binding.data()
-//     };
-//
-//     return device.createDescriptorSetLayout(layout_info);
-// }
-//
-// vk::DescriptorPool
-// PipelineCreationSystem::calculate_descriptor_pool(vk::Device device) {
-//
-//     std::vector<vk::DescriptorPoolSize> pool_size{};
-//     pool_size.reserve(m_combined_layouts.size());
-//
-//     uint32_t pool_size_idx = 0;
-//     for (auto combined_layout : m_combined_layouts) {
-//         pool_size.push_back(
-//             { .type            = combined_layout.first,
-//               .descriptorCount = combined_layout.second * MAX_FRAMES_IN_FLIGHT }
-//         );
-//     }
-//
-//     vk::DescriptorPoolCreateInfo pool_info{
-//         .flags         = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-//         .maxSets       = MAX_FRAMES_IN_FLIGHT * m_descriptor_set_count,
-//         .poolSizeCount = static_cast<uint32_t>(pool_size.size()),
-//         .pPoolSizes    = pool_size.data()
-//     };
-//
-//     return device.createDescriptorPool(pool_info);
-// }
-//
-// std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT>
-// PipelineCreationSystem::create_descriptor_set(
-//     vk::Device              device,
-//     vk::DescriptorSetLayout layout,
-//     vk::DescriptorPool      pool
-// ) {
-//
-//     std::vector<vk::DescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, layout);
-//
-//     vk::DescriptorSetAllocateInfo alloc_info{
-//         .descriptorPool     = pool,
-//         .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
-//         .pSetLayouts        = layouts.data()
-//     };
-//
-//     // This guy here is where we allocate the memory
-//     auto v_sets = device.allocateDescriptorSets(alloc_info);
-//     std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT> sets;
-//     std::copy(
-//         v_sets.begin(), v_sets.begin() + MAX_FRAMES_IN_FLIGHT, sets.begin()
-//     );
-//
-//     return sets;
-// }
-//
-// std::vector<vk::WriteDescriptorSet>
-// PipelineCreationSystem::create_descriptor_writes(PipelineBundle& bundle) {
-//     std::vector<vk::WriteDescriptorSet> writes;
-//
-//     for (auto& layout_binding : bundle.descriptor_set_layout_bindings) {
-//
-//         if (layout_binding.descriptorType ==
-//             vk::DescriptorType::eCombinedImageSampler) {
-//             for (auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-//                 writes.push_back(
-//                     { .dstSet          = bundle.descriptor_sets[i],
-//                       .dstBinding      = layout_binding.binding,
-//                       .dstArrayElement = 0,
-//                       .descriptorCount = layout_binding.descriptorCount,
-//                       .descriptorType  = layout_binding.descriptorType,
-//                       .pImageInfo      = bundle.descriptor_images.data() }
-//                 );
-//         } else if (
-//             layout_binding.descriptorType == vk::DescriptorType::eUniformBuffer
-//         ) {
-//             for (auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-//                 writes.push_back(
-//                     { .dstSet          = bundle.descriptor_sets[i],
-//                       .dstBinding      = layout_binding.binding,
-//                       .dstArrayElement = 0,
-//                       .descriptorCount = layout_binding.descriptorCount,
-//                       .descriptorType  = layout_binding.descriptorType,
-//                       .pBufferInfo     = bundle.descriptor_buffers.data() }
-//                 );
-//         } else {
-//             throw std::runtime_error(
-//                 "Failed to craete descriptor writes. Descriptor type not "
-//                 "supported "
-//             );
-//         }
-//     }
-//
-//     return writes;
-// }
-// void PipelineCreationSystem::apply_writes(
-//     vk::Device                                 device,
-//     const std::vector<vk::WriteDescriptorSet>& writes
-// ) {
-//     device.updateDescriptorSets(writes, {});
-// }
 
 void create_graphics_pipeline(
     vk::Device      device,
@@ -267,14 +125,14 @@ void create_graphics_pipeline(
     };
 
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
-        .setLayoutCount         = static_cast<uint32_t>(bundle.descriptor_set_layout.size()),
+        .setLayoutCount =
+            static_cast<uint32_t>(bundle.descriptor_set_layout.size()),
         .pSetLayouts            = bundle.descriptor_set_layout.data(),
         .pushConstantRangeCount = 1,
         .pPushConstantRanges    = &push_constant_range
     };
 
-   bundle.pipeline_layout =
-        device.createPipelineLayout(pipelineLayoutInfo);
+    bundle.pipeline_layout = device.createPipelineLayout(pipelineLayoutInfo);
 
     vk::GraphicsPipelineCreateInfo graphics_pipeline_create_info{
         .stageCount          = 2,
@@ -307,7 +165,157 @@ void create_graphics_pipeline(
         nullptr, pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>()
     );
 
-    bundle.pipeline        = result.value;
+    bundle.pipeline = result.value;
 }
 
-} // namespace varicle::render::vulkan
+DescriptorSystem create_default_descriptor_system(vk::Device device) {
+    DescriptorLayoutCache   lc{};
+    DescriptorPoolAllocator dpa{};
+    DescriptorWriter        writer{};
+    return { std::move(lc), std::move(dpa), std::move(writer) };
+}
+
+void DescriptorWriter::write_buffer(
+    vk::Device                          device,
+    vk::DescriptorSetLayoutBinding      layout_binding,
+    vk::DescriptorSet                   descriptor_set,
+    std::span<vk::DescriptorBufferInfo> buffer_infos,
+    std::uint32_t                       offset
+
+) {
+
+    std::vector<vk::WriteDescriptorSet> writes;
+    writes.push_back(
+        { .dstSet          = descriptor_set,
+          .dstBinding      = layout_binding.binding,
+          .dstArrayElement = offset,
+          .descriptorCount = static_cast<uint32_t>(buffer_infos.size()),
+          .descriptorType  = layout_binding.descriptorType,
+          .pBufferInfo     = buffer_infos.data() }
+    );
+}
+void DescriptorWriter::write_texture(
+    vk::Device                         device,
+    vk::DescriptorSetLayoutBinding     layout_binding,
+    vk::DescriptorSet                  descriptor_set,
+    std::span<vk::DescriptorImageInfo> image_infos,
+    std::uint32_t                      offset
+) {
+    std::vector<vk::WriteDescriptorSet> writes;
+
+    writes.push_back(
+        { .dstSet          = descriptor_set,
+          .dstBinding      = layout_binding.binding,
+          .dstArrayElement = offset,
+          .descriptorCount = static_cast<uint32_t>(image_infos.size()),
+          .descriptorType  = layout_binding.descriptorType,
+          .pImageInfo      = image_infos.data() }
+    );
+
+    device.updateDescriptorSets(writes, {});
+}
+void DescriptorPoolAllocator::create_new_pool(vk::Device device) {
+    std::array<vk::DescriptorPoolSize, 2> pool_size{
+        vk::DescriptorPoolSize{
+            vk::DescriptorType::eCombinedImageSampler,
+            s_samplers,
+        },
+        vk::DescriptorPoolSize{
+            vk::DescriptorType::eUniformBuffer,
+            s_samplers,
+        }
+    };
+
+    vk::DescriptorPoolCreateInfo pool_info{
+        .flags         = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+        .maxSets       = s_maxSets,
+        .poolSizeCount = static_cast<uint32_t>(pool_size.size()),
+        .pPoolSizes    = pool_size.data()
+    };
+
+    if (m_current != nullptr) {
+        m_full.push_back(m_current);
+    }
+    m_current = device.createDescriptorPool(pool_info);
+}
+std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT>
+DescriptorPoolAllocator::create_set(
+    vk::Device                    device,
+    vk::DescriptorPool            pool,
+    vk::DescriptorSetAllocateInfo alloc_info
+) {
+
+    std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT> sets;
+    auto v_sets = device.allocateDescriptorSets(alloc_info);
+    std::copy(
+        v_sets.begin(), v_sets.begin() + MAX_FRAMES_IN_FLIGHT, sets.begin()
+    );
+
+    return sets;
+}
+std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT>
+DescriptorPoolAllocator::allocate(
+    vk::Device              device,
+    vk::DescriptorSetLayout layout
+) {
+
+    std::vector<vk::DescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, layout);
+
+    vk::DescriptorSetAllocateInfo alloc_info{
+        .descriptorPool     = m_current,
+        .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
+        .pSetLayouts        = layouts.data()
+    };
+    std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT> sets;
+
+    try {
+        sets = create_set(device, m_current, alloc_info);
+    } catch (vk::OutOfPoolMemoryError e) {
+        create_new_pool(device);
+        sets = create_set(device, m_current, alloc_info);
+    } catch (...) {
+        println("out of memory. failed to create a new descriptor pool");
+    }
+
+    return sets;
+}
+vk::DescriptorSetLayout DescriptorLayoutCache::get_or_create_layout(
+    vk::Device                                        device,
+    const std::vector<vk::DescriptorSetLayoutBinding> bindings
+) {
+    if (layout_cache.contains(bindings)) {
+        return layout_cache[bindings];
+    }
+
+    vk::DescriptorSetLayoutCreateInfo layout_info{
+        .bindingCount = static_cast<uint32_t>(bindings.size()),
+        .pBindings    = bindings.data()
+    };
+
+    layout_cache[bindings] = device.createDescriptorSetLayout(layout_info);
+
+    return layout_cache[bindings];
+}
+size_t LayoutKeyHash::operator()(
+    const std::vector<vk::DescriptorSetLayoutBinding>& bindings
+) const {
+    size_t hash = 0;
+
+    for (const auto& b : bindings) {
+        hash ^= std::hash<uint32_t>{}(b.binding) + 0x9e3779b9 + (hash << 6) +
+            (hash >> 2);
+
+        hash ^= std::hash<uint32_t>{}(static_cast<uint32_t>(b.descriptorType)) +
+            0x9e3779b9 + (hash << 6) + (hash >> 2);
+
+        hash ^= std::hash<uint32_t>{}(b.descriptorCount) + 0x9e3779b9 +
+            (hash << 6) + (hash >> 2);
+
+        // hash ^= std::hash<vk::ShaderStageFlags>{}(b.stageFlags) +
+        // 0x9e3779b9 +
+        //     (hash << 6) + (hash >> 2);
+    }
+
+    return hash;
+}
+} // namespace varicle::renderer::vulkan
