@@ -6,8 +6,10 @@
 
 namespace varicle::renderer::vulkan {
 
-[[nodiscard]] vk::ShaderModule
-create_shader_module(const VulkanContext& ctx, const std::vector<uint32_t>& code);
+[[nodiscard]] vk::ShaderModule create_shader_module(
+    const VulkanContext&         ctx,
+    const std::vector<uint32_t>& code
+);
 
 struct PipelineConfig {
 
@@ -105,25 +107,20 @@ class DescriptorPoolAllocator {
   public:
     void create_new_pool(vk::Device device);
 
-    std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT> create_set(
-        vk::Device                    device,
-        vk::DescriptorPool            pool,
-        vk::DescriptorSetAllocateInfo alloc_info
+    std::vector<vk::DescriptorSet> allocate(
+        vk::Device              device,
+        std::vector<vk::DescriptorSetLayout> layouts
     );
-
-    // checks sets is not empty
-    std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT>
-    allocate(vk::Device device, vk::DescriptorSetLayout layout);
 };
 
 class DescriptorWriter {
   public:
     void write_buffer(
-        vk::Device                          device,
-        vk::DescriptorSetLayoutBinding      layout_binding,
-        vk::DescriptorSet                   descriptor_set,
-        std::span<vk::DescriptorBufferInfo> buffer_infos,
-        std::uint32_t                       offset = 0
+        vk::Device                                device,
+        vk::DescriptorSetLayoutBinding            layout_binding,
+        vk::DescriptorSet                         descriptor_set,
+        std::span<const vk::DescriptorBufferInfo> buffer_infos,
+        std::uint32_t                             offset = 0
 
     );
 
@@ -131,7 +128,7 @@ class DescriptorWriter {
         vk::Device                         device,
         vk::DescriptorSetLayoutBinding     layout_binding,
         vk::DescriptorSet                  descriptor_set,
-        std::span<vk::DescriptorImageInfo> image_infos,
+        std::span<const vk::DescriptorImageInfo> image_infos,
         std::uint32_t                      offset = 0
     );
 };

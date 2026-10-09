@@ -51,8 +51,17 @@ void dcp(void* ptr, Slang::ComPtr<slang::IBlob> diagnostic) {
 
 std::vector<CompiledShader> compile_shader_code(
     std::string              path,
-    std::vector<std::string> entry_point_names
+    std::vector<std::string> entry_point_names,
+    std::vector<std::string> include_dirs
 ) {
+
+    std::vector<const char*> raw_search_paths;
+    for (const auto& dir : include_dirs) {
+        raw_search_paths.push_back(dir.c_str());
+    }
+    // "shaders/include",
+    // "shaders/common",
+
     // slang::IGlobalSession* slang_global_session = nullptr;
     Slang::ComPtr<slang::IGlobalSession> slang_global_session;
     auto result = slang::createGlobalSession(slang_global_session.writeRef());
@@ -67,8 +76,13 @@ std::vector<CompiledShader> compile_shader_code(
     target_desc.profile = slang_global_session->findProfile("spirv_1_5");
 
     slang::SessionDesc session_desc = {};
-    session_desc.targets            = &target_desc;
-    session_desc.targetCount        = 1;
+
+    session_desc.searchPaths = raw_search_paths.data();
+    session_desc.searchPathCount =
+        static_cast<SlangInt>(raw_search_paths.size());
+
+    session_desc.targets     = &target_desc;
+    session_desc.targetCount = 1;
 
     Slang::ComPtr<slang::ISession> slang_session;
     result = slang_global_session->createSession(

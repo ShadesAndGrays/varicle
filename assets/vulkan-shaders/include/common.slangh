@@ -1,0 +1,10 @@
+struct FrameData{
+    column_major float4x4 viewProj = {1};
+    float4 cameraPos;
+}
+
+
+struct PushConstants {
+    column_major float4x4 modelMatrix;
+} 
+

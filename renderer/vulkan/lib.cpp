@@ -1,4 +1,5 @@
 #include "renderer/vulkan/lib.hpp"
+#include "renderer/common/transform.hpp"
 #include "renderer/vulkan/core/config.hpp"
 #include "renderer/vulkan/core/context.hpp"
 #include "renderer/vulkan/core/device.hpp"
@@ -37,8 +38,8 @@ void load_primitives(VulkanContext& ctx, ResourceManager& rm) {
             primitive.indices,
         };
 
-        create_index_buffer(ctx, mesh);
-        create_vertex_buffer(ctx, mesh);
+        MeshData::create_index_buffer(ctx, mesh);
+        MeshData::create_vertex_buffer(ctx, mesh);
         mesh.ID = i;
         rm.add_mesh(std::move(mesh));
     }
@@ -305,10 +306,27 @@ void varicle::renderer::vulkan::end_frame(VulkanContext& ctx) {
     glfwPollEvents();
 }
 
+void print_vertex_trans(const RenderCamera& camera, const glm::mat4& mvp, const MeshData& mesh,int idx ) {
+
+    auto clip = camera.camera.get_view_project_matrix(GraphicsBackend::Vulkan) *
+        mvp * glm::vec4(glm::make_vec3(mesh.m_vertices[idx].position.data()), 1);
+
+    std::println(
+        "{}: {} {} {} w={}",
+        idx,
+        clip.x / clip.w,
+        clip.y / clip.w,
+        clip.z / clip.w,
+        clip.w
+    );
+}
 void varicle::renderer::vulkan::draw_primitive(
     VulkanContext&   ctx,
     ResourceManager& rm,
-    PrimitiveType    type
+    PrimitiveType    type,
+    MaterialHandle   material,
+    const Transform& transform,
+    RenderCamera&    camera
 ) {
 
     auto& mesh = rm.get_mesh(static_cast<uint32_t>(type));
@@ -322,10 +340,30 @@ void varicle::renderer::vulkan::draw_primitive(
         vk::IndexTypeValue<decltype(mesh.m_indices)::value_type>::value
     );
 
-    auto& mat = rm.get_material(0);
+    auto& mat = rm.get_material(material);
 
     cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, mat.m_graphics_pipeline);
-    auto mvp = glm::mat4(1);
+    const auto mvp = transform.get_model_matrix();
+
+    camera.update(ctx.m_frame_index);
+
+    // auto clip = camera.camera.get_view_project_matrix(GraphicsBackend::Vulkan) *
+    //     mvp * glm::vec4(glm::make_vec3(mesh.m_vertices[0].position.data()), 1);
+    //
+    // std::println(
+    //     "{} {} {} w={}",
+    //     clip.x / clip.w,
+    //     clip.y / clip.w,
+    //     clip.z / clip.w,
+    //     clip.w
+    // );
+
+    // print_vertex_trans(camera,mvp,mesh,0);
+    // print_vertex_trans(camera,mvp,mesh,1);
+    // print_vertex_trans(camera,mvp,mesh,2);
+    // print_vertex_trans(camera,mvp,mesh,3);
+    // std::println("");
+    // auto mvp = glm::mat4(1);
 
     cmd.pushConstants(
         mat.m_pipeline_layout,
@@ -340,7 +378,7 @@ void varicle::renderer::vulkan::draw_primitive(
         vk::PipelineBindPoint::eGraphics,
         mat.m_pipeline_layout,
         0,
-        mat.m_descriptor_sets[ctx.m_frame_index],
+        { camera.descriptor_sets[ctx.m_frame_index], mat.m_descriptor_set },
         nullptr
     );
 

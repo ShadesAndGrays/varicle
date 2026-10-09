@@ -1,6 +1,7 @@
 #pragma once
 #include "core/color.hpp"
 #include "core/slot-map.hpp"
+#include "core/type.hpp"
 #include <iostream>
 #include <string>
 #include <variant>
@@ -12,88 +13,6 @@ namespace varicle {
 template <typename... Ts> struct Overloaded : Ts... {
     using Ts::operator()...;
 };
-
-struct Vec2 {
-    float x = 0.0f;
-    float y = 0.0f;
-
-    bool operator==(const Vec2& o) const { return x == o.x && y == o.y; }
-    bool operator!=(const Vec2& o) const { return !(*this == o); }
-    Vec2 operator+(const Vec2& o) const { return { x + o.x, y + o.y }; }
-    Vec2 operator-(const Vec2& o) const { return { x - o.x, y - o.y }; }
-    Vec2 operator*(float scalar) const { return { x * scalar, y * scalar }; }
-    Vec2 operator*(int scalar) const { return { x * scalar, y * scalar }; }
-
-    constexpr static Vec2 ZERO() { return Vec2{ 0.0f, 0.0f }; }
-    constexpr static Vec2 ONE() { return Vec2{ 1.0f, 1.0f }; }
-    constexpr static Vec2 UP() { return Vec2{ 0.0f, 1.0f }; }
-    constexpr static Vec2 DOWN() { return Vec2{ 0.0f, -1.0f }; }
-    constexpr static Vec2 LEFT() { return Vec2{ -1.0f, 0.0f }; }
-    constexpr static Vec2 RIGHT() { return Vec2{ 1.0f, 0.0f }; }
-};
-
-struct Vec3 {
-    float x = 0.0f;
-    float y = 0.0f;
-    float z = 0.0f;
-
-    bool operator==(const Vec3& o) const {
-        return x == o.x && y == o.y && z == o.z;
-    }
-    bool operator!=(const Vec3& o) const { return !(*this == o); }
-    Vec3 operator+(const Vec3& o) const {
-        return { x + o.x, y + o.y, z + o.z };
-    }
-    Vec3 operator-(const Vec3& o) const {
-        return { x - o.x, y - o.y, z - o.z };
-    }
-    Vec3 operator*(float scalar) const {
-        return { x * scalar, y * scalar, z * scalar };
-    }
-    Vec3 operator*(int scalar) const {
-        return { x * scalar, y * scalar, z * scalar };
-    }
-};
-
-struct Vec4 {
-    float x = 0.0f;
-    float y = 0.0f;
-    float z = 0.0f;
-    float w = 1.0f;
-
-    bool operator==(const Vec4& o) const {
-        return x == o.x && y == o.y && z == o.z && w == o.w;
-    }
-    bool operator!=(const Vec4& o) const { return !(*this == o); }
-    Vec4 operator+(const Vec4& o) const {
-        return { x + o.x, y + o.y, z + o.z, w + o.w };
-    }
-    Vec4 operator-(const Vec4& o) const {
-        return { x - o.x, y - o.y, z - o.z, w - o.w };
-    }
-    Vec4 operator*(float scalar) const {
-        return { x * scalar, y * scalar, z * scalar, w * scalar };
-    }
-    Vec4 operator*(int scalar) const {
-        return { x * scalar, y * scalar, z * scalar, w * scalar };
-    }
-};
-
-// Standalone Interpolation Helpers
-inline Vec2 vec2_lerp(const Vec2& s, const Vec2& e, float a) {
-    return { s.x + (e.x - s.x) * a, s.y + (e.y - s.y) * a };
-}
-inline Vec3 vec3_lerp(const Vec3& s, const Vec3& e, float a) {
-    return { s.x + (e.x - s.x) * a,
-             s.y + (e.y - s.y) * a,
-             s.z + (e.z - s.z) * a };
-}
-inline Vec4 vec4_lerp(const Vec4& s, const Vec4& e, float a) {
-    return { s.x + (e.x - s.x) * a,
-             s.y + (e.y - s.y) * a,
-             s.z + (e.z - s.z) * a,
-             s.w + (e.w - s.w) * a };
-}
 
 class EngineVariant {
 
@@ -107,7 +26,7 @@ class EngineVariant {
         Vec4,
         std::string,
         bool,
-        varicle::Color,
+        varicle::Color8,
         // entt::entity,
         structures::SlotID>;
 
@@ -121,7 +40,7 @@ class EngineVariant {
     EngineVariant(std::string v) : data(std::move(v)) {}
     EngineVariant(const char* v) : data(std::string(v)) {}
     EngineVariant(bool v) : data(v) {}
-    EngineVariant(Color v) : data(v) {}
+    EngineVariant(Color8 v) : data(v) {}
     EngineVariant(structures::SlotID v) : data(v) {}
 
     template <typename T> T        get() const { return std::get<T>(data); }
@@ -134,7 +53,7 @@ class EngineVariant {
     operator Vec2() const { return get<Vec2>(); }
     operator Vec3() const { return get<Vec3>(); }
     operator Vec4() const { return get<Vec4>(); }
-    operator Color() const { return get<Color>(); }
+    operator Color8() const { return get<Color8>(); }
     // operator entt::entity() const { return get<entt::entity>(); }
     operator bool() const { return get<bool>(); }
     operator std::string() const { return get<std::string>(); }
@@ -160,7 +79,7 @@ class EngineVariant {
                     return std::to_string(v.x) + ", " + std::to_string(v.y) +
                         ", " + std::to_string(v.z) + ", " + std::to_string(v.w);
                 },
-                [](const varicle::Color& v) {
+                [](const varicle::Color8& v) {
                     return std::to_string(v.r) + ", " + std::to_string(v.g) +
                         ", " + std::to_string(v.b) + ", " + std::to_string(v.a);
                 },
@@ -191,7 +110,7 @@ class EngineVariant {
                 [](const Vec2&) -> std::string { return "Vec2"; },
                 [](const Vec3&) -> std::string { return "Vec3"; },
                 [](const Vec4&) -> std::string { return "Vec4"; },
-                [](const varicle::Color&) -> std::string { return "Color"; },
+                [](const varicle::Color8&) -> std::string { return "Color"; },
                 [](const std::string&) -> std::string { return "String"; },
                 [](const structures::SlotID&) -> std::string { return "ID"; },
                 [](const auto&) -> std::string { return "Unknown"; } },

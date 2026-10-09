@@ -11,5 +11,6 @@ struct CompiledShader {
 
 std::vector<CompiledShader> compile_shader_code(
     std::string              path,
-    std::vector<std::string> entry_point_names
+    std::vector<std::string> entry_point_names,
+    std::vector<std::string> include_dirs = {}
 );

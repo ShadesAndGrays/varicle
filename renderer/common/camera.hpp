@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/type.hpp"
+#include "renderer/common/window.hpp"
 #include <glm/glm.hpp>
 
 namespace varicle::renderer {
@@ -7,16 +9,16 @@ namespace varicle::renderer {
 struct Camera {
 
     enum CameraType {
-        PERSPCTIVE,
-        ORTHOGRAHIC,
+        PERSPECTIVE,
+        ORTHOGRAPHIC,
     };
 
-    CameraType type = ORTHOGRAHIC;
+    CameraType type = ORTHOGRAPHIC;
 
     float width;
     float height;
 
-    // Projection: Perspective
+    // Projection
     float near;
     float far;
 
@@ -24,28 +26,43 @@ struct Camera {
     float fov;
 
     // Projection: View
-    float center[3];
-    float eye[3];
-    float up[3];
+    Vec3 position{ 0, 0, 0 };
+    Vec3 target{ 0, 0, 0 };
+    Vec3 up{ 0, 1, 0 };
 
     float aspect() const { return width / height; }
 
     static Camera default_orthographic() {
-        return {
-            CameraType::ORTHOGRAHIC, 1280.f,      720.f,      0.1f, 100.f, 0.0f,
-            { 0, 0, -10 },           { 0, 0, 0 }, { 0, 1, 0 }
-        };
+        return { CameraType::ORTHOGRAPHIC,
+                 1280.f,
+                 720.f,
+                 0.1f,
+                 100.f,
+                 0.0f,
+                 { 0, 0, -1 },
+                 { 0, 0, 0 },
+                 { 0, 1, 0 } };
     }
 
     static Camera default_perspective() {
-        return {
-            CameraType::PERSPCTIVE, 1280.f,      720.f,      -1.0f, 1.f, 45.f,
-            { 0, 0, -10 },          { 0, 0, 0 }, { 0, 1, 0 }
-        };
+        return { CameraType::PERSPECTIVE,
+                 1280.f,
+                 720.f,
+                 0.1f,
+                 100.0f,
+                 45.f,
+                 { 10, 10, 10 },
+                 { 0, 0, 0 },
+                 { 0, 1, 0 } };
     }
 
-    glm::mat4 get_projection_matix();
-    glm::mat4 get_view_matrix();
+    glm::mat4 get_projection_matix(
+        GraphicsBackend backend = GraphicsBackend::OpenGL
+    ) const;
+    glm::mat4 get_view_matrix() const;
+    glm::mat4 get_view_project_matrix(
+        GraphicsBackend backend = GraphicsBackend::OpenGL
+    ) const;
 };
 
 } // namespace varicle::renderer

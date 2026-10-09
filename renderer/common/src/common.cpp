@@ -1,15 +1,16 @@
 
 #include "renderer/common/common.hpp"
-// #include "renderer/common/camera.hpp"
+#include "renderer/common/camera.hpp"
 // #include "renderer/common/object.hpp"
 #include "renderer/common/transform.hpp"
 #include "renderer/common/vertex.hpp"
 #include "renderer/common/window.hpp"
 
+#include <cstring>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/quaternion_transform.hpp>
-// #include <print>
+#include <print>
 
 varicle::renderer::Window::Window(
     int             width,
@@ -67,19 +68,51 @@ float varicle::renderer::Window::get_aspect() {
 //
 //     return model;
 // }
-// glm::mat4 varicle::renderer::Camera::get_projection_matix() {
-//     if (projection_type == PERSPECTIVE) {
-//         auto proj = glm::perspective(glm::radians(45.0f), aspect, near, far);
-//         proj[1][1] *= -1;
-//         return proj;
-//     } else
-//         return glm::perspective(glm::radians(45.0f), aspect, near, far);
-// }
-//
-// glm::mat4 varicle::renderer::Camera::get_view_matrix() {
-//     return glm::lookAt(position, target, up);
-// }
+glm::mat4 varicle::renderer::Camera::get_projection_matix(
+    varicle::renderer::GraphicsBackend backend
+) const {
+    if (type == CameraType::PERSPECTIVE) {
+        if (backend == GraphicsBackend::Vulkan) {
+            auto proj =
+                glm::perspectiveRH_ZO(glm::radians(fov), aspect(), near, far);
+            proj[1][1] *= -1;
+            return proj;
+        }
+        return glm::perspectiveRH_NO(glm::radians(fov), aspect(), near, far);
+    } else {
+        if (backend == GraphicsBackend::Vulkan) {
+            auto proj = glm::orthoRH_ZO(
+                -width / 2, width / 2, -height / 2, height / 2, near, far
+            );
+            proj[1][1] *= -1;
+            return proj;
+        }
+        return glm::orthoRH_NO(
+            -width / 2, width / 2, -height / 2, height / 2, near, far
+        );
+    }
+}
 
+glm::mat4 varicle::renderer::Camera::get_view_matrix() const {
+    return glm::lookAt(
+        glm::vec3(position.x, position.y, position.z),
+        glm::vec3(target.x, target.y, target.z),
+        glm::vec3(up.x, up.y, up.z)
+    );
+}
+
+glm::mat4 varicle::renderer::Camera::get_view_project_matrix(
+    varicle::renderer::GraphicsBackend backend
+) const {
+    // auto view =
+    //     get_projection_matix(backend) * get_view_matrix() * glm::vec4(0, 0,
+    //     0, 1);
+    // std::println("x : {} y: {} z: {} w: {}", view.x, view.y, view.z, view.w);
+
+    // return  get_view_matrix();
+    return glm::mat4(1) ;
+    // return get_projection_matix(backend) * get_view_matrix();
+}
 varicle::renderer::Mesh
 varicle::renderer::get_primitive(varicle::renderer::PrimitiveType type) {
     using namespace varicle::renderer;
@@ -150,11 +183,11 @@ varicle::renderer::get_primitive(varicle::renderer::PrimitiveType type) {
     }
 }
 
-glm::mat4 varicle::renderer::get_model_matrix(const Transform& transform) {
+glm::mat4 varicle::renderer::Transform::get_model_matrix() const {
 
-    const auto& [x, y, z]    = transform.position;
-    const auto& [w, h, d]    = transform.scale;
-    const auto& [rx, ry, rz] = transform.rotation;
+    const auto [x, y, z]    = position.v;
+    const auto [w, h, d]    = scale.v;
+    const auto [rx, ry, rz] = rotation.v;
 
     glm::vec3 translate_vector(x, y, z);
     glm::vec3 scale_vector(w, h, d);

@@ -2,19 +2,21 @@
 #include "renderer/vulkan/graphics/pipeline.hpp"
 #include "renderer/vulkan/core/config.hpp"
 #include "renderer/vulkan/core/context.hpp"
+#include <exception>
 #include <print>
 
 using std::println;
 
 namespace varicle::renderer::vulkan {
 
-vk::ShaderModule
-create_shader_module(const VulkanContext& ctx, const std::vector<uint32_t>& code) {
+vk::ShaderModule create_shader_module(
+    const VulkanContext&         ctx,
+    const std::vector<uint32_t>& code
+) {
 
-    vk::ShaderModuleCreateInfo createInfo{
-        .codeSize = code.size() * sizeof(uint32_t),
-        .pCode    = code.data()
-    };
+    vk::ShaderModuleCreateInfo createInfo{ .codeSize =
+                                               code.size() * sizeof(uint32_t),
+                                           .pCode = code.data() };
     vk::ShaderModule shaderModule(ctx.m_device.createShaderModule(createInfo));
     return shaderModule;
 }
@@ -71,9 +73,9 @@ void create_graphics_pipeline(
                                                         .scissorCount  = 1 };
 
     vk::PipelineDepthStencilStateCreateInfo depth_stencil{
-        .depthTestEnable       = vk::True,
+        .depthTestEnable       = vk::True, // set to true after getting object to how
         .depthWriteEnable      = vk::True,
-        .depthCompareOp        = vk::CompareOp::eLess,
+        .depthCompareOp        = vk::CompareOp::eLess, // chang change back to less
         .depthBoundsTestEnable = vk::False,
         .stencilTestEnable     = vk::False,
     };
@@ -176,11 +178,11 @@ DescriptorSystem create_default_descriptor_system(vk::Device device) {
 }
 
 void DescriptorWriter::write_buffer(
-    vk::Device                          device,
-    vk::DescriptorSetLayoutBinding      layout_binding,
-    vk::DescriptorSet                   descriptor_set,
-    std::span<vk::DescriptorBufferInfo> buffer_infos,
-    std::uint32_t                       offset
+    vk::Device                                device,
+    vk::DescriptorSetLayoutBinding            layout_binding,
+    vk::DescriptorSet                         descriptor_set,
+    std::span<const vk::DescriptorBufferInfo> buffer_infos,
+    std::uint32_t                             offset
 
 ) {
 
@@ -193,12 +195,14 @@ void DescriptorWriter::write_buffer(
           .descriptorType  = layout_binding.descriptorType,
           .pBufferInfo     = buffer_infos.data() }
     );
+
+    device.updateDescriptorSets(writes, {});
 }
 void DescriptorWriter::write_texture(
     vk::Device                         device,
     vk::DescriptorSetLayoutBinding     layout_binding,
     vk::DescriptorSet                  descriptor_set,
-    std::span<vk::DescriptorImageInfo> image_infos,
+    std::span<const vk::DescriptorImageInfo> image_infos,
     std::uint32_t                      offset
 ) {
     std::vector<vk::WriteDescriptorSet> writes;
@@ -238,46 +242,36 @@ void DescriptorPoolAllocator::create_new_pool(vk::Device device) {
     }
     m_current = device.createDescriptorPool(pool_info);
 }
-std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT>
-DescriptorPoolAllocator::create_set(
-    vk::Device                    device,
-    vk::DescriptorPool            pool,
-    vk::DescriptorSetAllocateInfo alloc_info
+
+std::vector<vk::DescriptorSet> DescriptorPoolAllocator::allocate(
+    vk::Device                           device,
+    std::vector<vk::DescriptorSetLayout> layouts
 ) {
-
-    std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT> sets;
-    auto v_sets = device.allocateDescriptorSets(alloc_info);
-    std::copy(
-        v_sets.begin(), v_sets.begin() + MAX_FRAMES_IN_FLIGHT, sets.begin()
-    );
-
-    return sets;
-}
-std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT>
-DescriptorPoolAllocator::allocate(
-    vk::Device              device,
-    vk::DescriptorSetLayout layout
-) {
-
-    std::vector<vk::DescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, layout);
+    if (layouts.empty())
+        return {};
 
     vk::DescriptorSetAllocateInfo alloc_info{
         .descriptorPool     = m_current,
         .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
         .pSetLayouts        = layouts.data()
     };
-    std::array<vk::DescriptorSet, MAX_FRAMES_IN_FLIGHT> sets;
 
     try {
-        sets = create_set(device, m_current, alloc_info);
-    } catch (vk::OutOfPoolMemoryError e) {
-        create_new_pool(device);
-        sets = create_set(device, m_current, alloc_info);
-    } catch (...) {
-        println("out of memory. failed to create a new descriptor pool");
-    }
+        return device.allocateDescriptorSets(alloc_info);
 
-    return sets;
+    } catch (vk::OutOfPoolMemoryError e) {
+        // create new pool pushes old pool out
+        create_new_pool(device);
+
+        // update pool pointer
+        alloc_info.descriptorPool = m_current;
+
+        return device.allocateDescriptorSets(alloc_info);
+
+    } catch (const std::exception& e) {
+        println("Failed to allocate descriptor sets {}", e.what());
+        throw;
+    }
 }
 vk::DescriptorSetLayout DescriptorLayoutCache::get_or_create_layout(
     vk::Device                                        device,

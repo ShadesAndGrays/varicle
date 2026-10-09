@@ -2,27 +2,88 @@
 #include <cstdint>
 
 namespace varicle {
-struct Color {
-    uint8_t r = 255;
-    uint8_t g = 255;
-    uint8_t b = 255;
-    uint8_t a = 255;
+
+// from 0 to 1
+struct Colorf {
+
+    union {
+        struct {
+            float r = 1.0f;
+            float g = 1.0f;
+            float b = 1.0f;
+            float a = 1.0f;
+        };
+        struct {
+            float x;
+            float y;
+            float z;
+            float w;
+        };
+        float c[4];
+    };
+
+    float* data() { return c; }
+
+    static constexpr Colorf White() { return { 1.0f, 1.0f, 1.0f, 1.0f }; }
+    static constexpr Colorf Black() { return { 0.0f, 0.0f, 0.0f, 1.0f }; }
+    static constexpr Colorf Red() { return { 1.0f, 0.0f, 0.0f, 1.0f }; }
+    static constexpr Colorf Orange() {
+        return { 1.0f, 165.0f / 255.0f, 0.0f, 1.0f };
+    }
+    static constexpr Colorf Yellow() { return { 1.0f, 1.0f, 0.0f, 1.0f }; }
+    static constexpr Colorf Green() { return { 0.0f, 1.0f, 0.0f, 1.0f }; }
+    static constexpr Colorf Blue() { return { 0.0f, 0.0f, 1.0f, 1.0f }; }
+    static constexpr Colorf Purple() {
+        return { 200.0f / 255.0f, 122.0f / 255.0f, 1.0f, 1.0f };
+    }
+};
+
+struct Color8 {
+    union {
+        struct {
+            uint8_t r = 255;
+            uint8_t g = 255;
+            uint8_t b = 255;
+            uint8_t a = 255;
+        };
+        struct {
+            uint8_t x;
+            uint8_t y;
+            uint8_t z;
+            uint8_t w;
+        };
+        uint8_t c[4];
+    };
+
+    uint8_t* data() { return c; }
 
     // Common default presets
-    static constexpr Color White() { return { 255, 255, 255, 255 }; }
-    static constexpr Color Black() { return { 0, 0, 0, 255 }; }
-    static constexpr Color Red() { return { 255, 0, 0, 255 }; }
-    static constexpr Color Orange() { return { 255, 165, 0, 255 }; }
-    static constexpr Color Yellow() { return { 255, 255, 0, 255 }; }
-    static constexpr Color Green() { return { 0, 255, 0, 255 }; }
-    static constexpr Color Blue() { return { 0, 0, 255, 255 }; }
-    static constexpr Color Purple() { return { 200, 122, 255, 255 }; }
+    static constexpr Color8 White() { return { 255, 255, 255, 255 }; }
+    static constexpr Color8 Black() { return { 0, 0, 0, 255 }; }
+    static constexpr Color8 Red() { return { 255, 0, 0, 255 }; }
+    static constexpr Color8 Orange() { return { 255, 165, 0, 255 }; }
+    static constexpr Color8 Yellow() { return { 255, 255, 0, 255 }; }
+    static constexpr Color8 Green() { return { 0, 255, 0, 255 }; }
+    static constexpr Color8 Blue() { return { 0, 0, 255, 255 }; }
+    static constexpr Color8 Purple() { return { 200, 122, 255, 255 }; }
+
+    constexpr Color8 to8() const {
+        auto c = [](float v) {
+            v = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+            return static_cast<uint8_t>(v * 255.0f + 0.5f);
+        };
+        return { c(r), c(g), c(b), c(a) };
+    }
+
+    static constexpr Colorf from8(Color8 c) {
+        return { c.r / 255.0f, c.g / 255.0f, c.b / 255.0f, c.a / 255.0f };
+    }
 };
 
 class ColorUtil {
   public:
     // Standalone Color Interpolation Helper
-    static Color color_lerp(Color s, Color e, float a) {
+    static Color8 color_lerp(Color8 s, Color8 e, float a) {
         auto lerp_u8 = [](uint8_t start, uint8_t end, float t) -> uint8_t {
             return static_cast<uint8_t>(start + (end - start) * t);
         };
@@ -31,10 +92,6 @@ class ColorUtil {
                  lerp_u8(s.b, e.b, a),
                  lerp_u8(s.a, e.a, a) };
     }
-
-    // static ::Color to_raylib_color(const varicle::Color& c) {
-    //     return ::Color{ c.r, c.g, c.b, c.a };
-    // }
 };
 
 } // namespace varicle

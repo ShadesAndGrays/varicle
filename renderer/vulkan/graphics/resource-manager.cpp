@@ -134,8 +134,8 @@ MeshHandle
 
 ResourceManager::load_mesh(vulkan::VulkanContext& ctx, const char* filepath) {
     MeshData mesh = load_mesh_data(filepath);
-    create_vertex_buffer(ctx, mesh);
-    create_index_buffer(ctx, mesh);
+    MeshData::create_vertex_buffer(ctx, mesh);
+    MeshData::create_index_buffer(ctx, mesh);
     return add_mesh(std::move(mesh));
 }
 MeshHandle ResourceManager::add_mesh(MeshData&& mesh) {
@@ -368,9 +368,9 @@ MaterialHandle ResourceManager::add_material(
 
 
 //ResourceManager::
-MaterialHandle create_material(VulkanContext& ctx) {
-
-    }
+// MaterialHandle create_material(VulkanContext& ctx) {
+//
+//     }
 
 void ResourceManager::unload_material(
     VulkanContext& ctx,

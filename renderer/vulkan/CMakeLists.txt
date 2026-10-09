@@ -32,6 +32,7 @@ set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "" FORCE)
 target_compile_definitions(${TARGET}
     PUBLIC
     VULKAN_HPP_NO_STRUCT_CONSTRUCTORS=1
+    GLM_FORCE_DEPTH_ZERO_TO_ONE
 
     PRIVATE
     GLFW_INCLUDE_VULKAN
@@ -69,6 +70,7 @@ target_sources(${TARGET}
     graphics/image.cpp
     graphics/buffer.cpp
     graphics/pipeline.cpp
+    graphics/resource.cpp
     graphics/resource-manager.cpp
     util/slang-compiler.cpp
 )

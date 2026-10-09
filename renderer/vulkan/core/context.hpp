@@ -1,7 +1,6 @@
 #pragma once
 
 #include "renderer/common/window.hpp"
-#include "renderer/vulkan/graphics/resource.hpp"
 
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
@@ -23,7 +22,7 @@ struct VulkanContext {
 
     Window& m_window;
 
-    VulkanContext(Window& window): m_window(window){}
+    VulkanContext(Window& window) : m_window(window) {}
 
     QueueFamilyIndices m_indices;
     uint32_t           m_frame_index         = 0;
@@ -75,9 +74,9 @@ struct VulkanContext {
     // vk::Buffer            m_index_buffer = nullptr; // interface for memory
     // vk::DeviceMemory      m_index_buffer_memory = nullptr; // actually memory
 
-    std::vector<vk::Buffer>       m_uniform_buffers;
-    std::vector<vk::DeviceMemory> m_uniform_buffers_memory;
-    std::vector<void*>            m_uniform_buffers_mapped;
+    // std::vector<vk::Buffer>       m_uniform_buffers;
+    // std::vector<vk::DeviceMemory> m_uniform_buffers_memory;
+    // std::vector<void*>            m_uniform_buffers_mapped;
 
     // I assume this should be would be from a
     // pool of memory in our custom allocator
@@ -110,7 +109,6 @@ struct VulkanContext {
     vk::CommandBuffer& get_current_command_buffer() {
         return m_command_buffers[m_frame_index];
     }
-
 };
 
 } // namespace varicle::renderer::vulkan
