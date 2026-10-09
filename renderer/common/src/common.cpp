@@ -10,7 +10,6 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/quaternion_transform.hpp>
-#include <print>
 
 varicle::renderer::Window::Window(
     int             width,
@@ -58,16 +57,6 @@ float varicle::renderer::Window::get_aspect() {
     return static_cast<float>(w) / static_cast<float>(h);
 }
 
-// glm::mat4 varicle::renderer::Object::get_model_matrix() const {
-//     glm::mat4 model = glm::mat4(1.0f); // identity
-//     model           = glm::translate(model, position);
-//     model = glm::rotate(model, rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
-//     model = glm::rotate(model, rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
-//     model = glm::rotate(model, rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
-//     model = glm::scale(model, scale);
-//
-//     return model;
-// }
 glm::mat4 varicle::renderer::Camera::get_projection_matix(
     varicle::renderer::GraphicsBackend backend
 ) const {
@@ -104,14 +93,7 @@ glm::mat4 varicle::renderer::Camera::get_view_matrix() const {
 glm::mat4 varicle::renderer::Camera::get_view_project_matrix(
     varicle::renderer::GraphicsBackend backend
 ) const {
-    // auto view =
-    //     get_projection_matix(backend) * get_view_matrix() * glm::vec4(0, 0,
-    //     0, 1);
-    // std::println("x : {} y: {} z: {} w: {}", view.x, view.y, view.z, view.w);
-
-    // return  get_view_matrix();
-    return glm::mat4(1) ;
-    // return get_projection_matix(backend) * get_view_matrix();
+    return get_projection_matix(backend) * get_view_matrix();
 }
 varicle::renderer::Mesh
 varicle::renderer::get_primitive(varicle::renderer::PrimitiveType type) {

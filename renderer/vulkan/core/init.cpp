@@ -14,12 +14,12 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 namespace varicle::renderer::vulkan {
 
-static void
-framebuffer_resize_callback(GLFWwindow* window, int width, int height) {
-    auto ctx =
-        reinterpret_cast<VulkanContext*>(glfwGetWindowUserPointer(window));
-    ctx->m_framebuffer_resized = true;
-}
+// static void
+// framebuffer_resize_callback(GLFWwindow* window, int width, int height) {
+//     auto ctx =
+//         reinterpret_cast<VulkanContext*>(glfwGetWindowUserPointer(window));
+//     ctx->m_framebuffer_resized = true;
+// }
 
 void create_instance(VulkanContext& ctx) {
 
@@ -116,6 +116,8 @@ void create_surface(VulkanContext& ctx) {
                 glfwGetWindowUserPointer(gl_window)
             );
             ctx->m_framebuffer_resized = true;
+            ctx->width = width;
+            ctx->height = height;
         }
     );
 

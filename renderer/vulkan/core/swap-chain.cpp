@@ -97,6 +97,11 @@ vk::Extent2D choose_swap_extent(
     VulkanContext&                    ctx,
     vk::SurfaceCapabilitiesKHR const& capabilities
 ) {
+
+    std::println("lw:{} mw:{} w:{}",capabilities.minImageExtent.width,capabilities.maxImageExtent.width,ctx.width);
+    std::println("lh:{} mh:{} h:{}",capabilities.minImageExtent.height,capabilities.maxImageExtent.height,ctx.height);
+    std::println("cw:{} ch:{}",capabilities.currentExtent.width,capabilities.currentExtent.height);
+
     if (capabilities.currentExtent.width !=
         std::numeric_limits<uint32_t>::max()) {
         return capabilities.currentExtent;

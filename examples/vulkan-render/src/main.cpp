@@ -142,9 +142,9 @@ int main() {
         .vert_shader_module     = shader_v_module,
         .binding_descriptions   = v::getBindingDescriptions(),
         .attribute_descriptions = v::getAttributeDescriptions(),
-        .cull_mode              = vk::CullModeFlagBits::eNone,
+        .cull_mode              = vk::CullModeFlagBits::eBack,
         .front_face             = vk::FrontFace::eClockwise,
-        .msaa_samples           = vk::SampleCountFlagBits::e8,
+        .msaa_samples           = ctx.m_msaa_samples,
         .push_constant_range    = sizeof(glm::mat4),
     };
 
@@ -166,7 +166,6 @@ int main() {
     while (!v::should_close(ctx)) {
         // value += 0.001667;
         //
-        value += 0.013667;
 
         v::begin_frame(ctx);
         // We draw our triangle
@@ -178,10 +177,12 @@ int main() {
             {
                 { 0, 0, 0},//  sin(value) * 200 },
                 { 1, 1, 1 },
-                { 0,0 , 0 },
+                { 0,value , 0 },
             },
             render_camera
         );
+
+        // value += 0.013667;
         v::end_frame(ctx);
     }
 

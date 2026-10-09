@@ -25,9 +25,9 @@ struct VSOutput {
 [shader("vertex")]
 VSOutput vertMain(VSInput input) {
     VSOutput output;
-    // output.pos = mul(u_frame.viewProj,mul(pc.modelMatrix, float4(input.inPosition,1.0f)));
+    output.pos = mul(u_frame.viewProj,mul(pc.modelMatrix, float4(input.inPosition,1.0f)));
     // output.pos = mul(pc.modelMatrix, float4(input.inPosition,1.0f));
-    output.pos = float4(input.inPosition,1.0f);
+    // output.pos = float4(input.inPosition,1.0f);
     output.color = input.inColor;
     output.fragTexCoord = input.inTexCoord;
     return output;
@@ -37,6 +37,5 @@ VSOutput vertMain(VSInput input) {
 float4 fragMain(VSOutput vertIn): SV_Target
 {
     float3 result =  float3(0.1,0.1,0.7) * v_texture.Sample(vertIn.fragTexCoord).rgb;
-    // result = float3( abs(u_frame.viewProj[3][2]),abs(u_frame.viewProj[0][0]),0.0f ); 
     return float4(result,1.0f);
 }

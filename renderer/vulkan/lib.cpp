@@ -306,20 +306,6 @@ void varicle::renderer::vulkan::end_frame(VulkanContext& ctx) {
     glfwPollEvents();
 }
 
-void print_vertex_trans(const RenderCamera& camera, const glm::mat4& mvp, const MeshData& mesh,int idx ) {
-
-    auto clip = camera.camera.get_view_project_matrix(GraphicsBackend::Vulkan) *
-        mvp * glm::vec4(glm::make_vec3(mesh.m_vertices[idx].position.data()), 1);
-
-    std::println(
-        "{}: {} {} {} w={}",
-        idx,
-        clip.x / clip.w,
-        clip.y / clip.w,
-        clip.z / clip.w,
-        clip.w
-    );
-}
 void varicle::renderer::vulkan::draw_primitive(
     VulkanContext&   ctx,
     ResourceManager& rm,
@@ -345,25 +331,9 @@ void varicle::renderer::vulkan::draw_primitive(
     cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, mat.m_graphics_pipeline);
     const auto mvp = transform.get_model_matrix();
 
+    // Set camera asepect and update frame data
+    std::tie(camera.camera.width, camera.camera.height) = ctx.m_window.size();
     camera.update(ctx.m_frame_index);
-
-    // auto clip = camera.camera.get_view_project_matrix(GraphicsBackend::Vulkan) *
-    //     mvp * glm::vec4(glm::make_vec3(mesh.m_vertices[0].position.data()), 1);
-    //
-    // std::println(
-    //     "{} {} {} w={}",
-    //     clip.x / clip.w,
-    //     clip.y / clip.w,
-    //     clip.z / clip.w,
-    //     clip.w
-    // );
-
-    // print_vertex_trans(camera,mvp,mesh,0);
-    // print_vertex_trans(camera,mvp,mesh,1);
-    // print_vertex_trans(camera,mvp,mesh,2);
-    // print_vertex_trans(camera,mvp,mesh,3);
-    // std::println("");
-    // auto mvp = glm::mat4(1);
 
     cmd.pushConstants(
         mat.m_pipeline_layout,
@@ -372,7 +342,6 @@ void varicle::renderer::vulkan::draw_primitive(
         sizeof(glm::mat4),
         &mvp
     );
-    // );
 
     cmd.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics,
