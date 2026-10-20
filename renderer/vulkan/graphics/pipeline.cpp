@@ -4,6 +4,7 @@
 #include "renderer/vulkan/core/context.hpp"
 #include <exception>
 #include <print>
+#include <tuple>
 
 using std::println;
 
@@ -73,9 +74,9 @@ void create_graphics_pipeline(
                                                         .scissorCount  = 1 };
 
     vk::PipelineDepthStencilStateCreateInfo depth_stencil{
-        .depthTestEnable       = vk::True, // set to true after getting object to how
-        .depthWriteEnable      = vk::True,
-        .depthCompareOp        = vk::CompareOp::eLess, // chang change back to less
+        .depthTestEnable  = vk::True, // set to true after getting object to how
+        .depthWriteEnable = vk::True,
+        .depthCompareOp   = vk::CompareOp::eLess, // chang change back to less
         .depthBoundsTestEnable = vk::False,
         .stencilTestEnable     = vk::False,
     };
@@ -170,6 +171,12 @@ void create_graphics_pipeline(
     bundle.pipeline = result.value;
 }
 
+void destory_graphics_pipeline(vk::Device device, PipelineBundle& bundle) {
+
+    device.destroyPipeline(bundle.pipeline);
+    device.destroyPipelineLayout(bundle.pipeline_layout);
+}
+
 DescriptorSystem create_default_descriptor_system(vk::Device device) {
     DescriptorLayoutCache   lc{};
     DescriptorPoolAllocator dpa{};
@@ -199,11 +206,11 @@ void DescriptorWriter::write_buffer(
     device.updateDescriptorSets(writes, {});
 }
 void DescriptorWriter::write_texture(
-    vk::Device                         device,
-    vk::DescriptorSetLayoutBinding     layout_binding,
-    vk::DescriptorSet                  descriptor_set,
+    vk::Device                               device,
+    vk::DescriptorSetLayoutBinding           layout_binding,
+    vk::DescriptorSet                        descriptor_set,
     std::span<const vk::DescriptorImageInfo> image_infos,
-    std::uint32_t                      offset
+    std::uint32_t                            offset
 ) {
     std::vector<vk::WriteDescriptorSet> writes;
 
@@ -237,42 +244,64 @@ void DescriptorPoolAllocator::create_new_pool(vk::Device device) {
         .pPoolSizes    = pool_size.data()
     };
 
-    if (m_current != nullptr) {
-        m_full.push_back(m_current);
-    }
-    m_current = device.createDescriptorPool(pool_info);
+    // if (m_current != nullptr) {
+    //     m_full.push_back(m_current);
+    // }
+    auto pool = device.createDescriptorPool(pool_info);
+    m_pool_stack.push_back(pool);
 }
 
-std::vector<vk::DescriptorSet> DescriptorPoolAllocator::allocate(
+DescriptorPoolAllocator::Allocation DescriptorPoolAllocator::allocate(
     vk::Device                           device,
     std::vector<vk::DescriptorSetLayout> layouts
 ) {
     if (layouts.empty())
         return {};
 
+    if (m_pool_stack.empty()) {
+        create_new_pool(device);
+    }
+
     vk::DescriptorSetAllocateInfo alloc_info{
-        .descriptorPool     = m_current,
+        .descriptorPool     = m_pool_stack.back(),
         .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
         .pSetLayouts        = layouts.data()
     };
 
     try {
-        return device.allocateDescriptorSets(alloc_info);
+        return { device.allocateDescriptorSets(alloc_info),
+                 static_cast<uint32_t>(m_pool_stack.size() - 1) };
 
     } catch (vk::OutOfPoolMemoryError e) {
         // create new pool pushes old pool out
         create_new_pool(device);
 
         // update pool pointer
-        alloc_info.descriptorPool = m_current;
+        alloc_info.descriptorPool = m_pool_stack.back();
 
-        return device.allocateDescriptorSets(alloc_info);
+        return { device.allocateDescriptorSets(alloc_info),
+                 static_cast<uint32_t>(m_pool_stack.size() - 1) };
 
     } catch (const std::exception& e) {
         println("Failed to allocate descriptor sets {}", e.what());
         throw;
     }
 }
+
+void DescriptorPoolAllocator::deallocate(
+    vk::Device        device,
+    vk::DescriptorSet set,
+    uint32_t          descriptor_pool_idx
+) {
+    device.freeDescriptorSets(m_pool_stack[descriptor_pool_idx], set);
+}
+
+void DescriptorPoolAllocator::reset(vk::Device device) {
+    for (auto pool : m_pool_stack) {
+        device.destroyDescriptorPool(pool);
+    }
+}
+
 vk::DescriptorSetLayout DescriptorLayoutCache::get_or_create_layout(
     vk::Device                                        device,
     const std::vector<vk::DescriptorSetLayoutBinding> bindings
@@ -290,6 +319,14 @@ vk::DescriptorSetLayout DescriptorLayoutCache::get_or_create_layout(
 
     return layout_cache[bindings];
 }
+
+void DescriptorLayoutCache::reset(vk::Device device) {
+    for (auto i : layout_cache) {
+        device.destroyDescriptorSetLayout(i.second);
+    }
+    layout_cache.clear();
+}
+
 size_t LayoutKeyHash::operator()(
     const std::vector<vk::DescriptorSetLayoutBinding>& bindings
 ) const {

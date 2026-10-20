@@ -1,7 +1,7 @@
 #include <varicle.hpp>
 
 #include "renderer/common/camera.hpp"
-#include "renderer/vulkan/graphics/render_camera.hpp"
+#include "renderer/vulkan/graphics/render-camera.hpp"
 #include "renderer/vulkan/graphics/resource.hpp"
 #include "renderer/vulkan/util/slang-compiler.hpp"
 
@@ -23,17 +23,11 @@ int main() {
     // Get Camera data
     auto render_camera = v::RenderCamera(ctx);
     render_camera.camera =
-        std::move(varicle::renderer::Camera::default_perspective());
+        std::move(varicle::renderer::Camera::default_orthographic());
     render_camera.camera.position.x = 0;
     render_camera.camera.position.y = 0;
-    render_camera.camera.position.z = 5;
+    render_camera.camera.position.z = 2;
 
-    // auto buffer_infos = std::vector<vk::DescriptorBufferInfo>{
-    //     render_camera.frame_data.get_buffer_info(0),
-    //     render_camera.frame_data.get_buffer_info(1)
-    // };
-
-    // First pool need to be created manually
     ds.pool_allocator.create_new_pool(ctx.m_device);
 
     // Shader uniform Bindings
@@ -78,7 +72,7 @@ int main() {
 
     // He we reuse the layout set. To give use two identitcal frame data set
     // along with our texture layout set
-    auto descriptor_sets = ds.pool_allocator.allocate(
+    auto set = ds.pool_allocator.allocate(
         ctx.m_device,
         { frame_data_layout_set, frame_data_layout_set, texture_layout_set }
     );
@@ -89,23 +83,23 @@ int main() {
     ds.writer.write_buffer(
         ctx.m_device,
         frame_data_layout_set_binding,
-        descriptor_sets[0],
+        set.descriptor_sets[0],
         std::array{ render_camera.get_buffer_descriptor()[0] }
     );
 
     ds.writer.write_buffer(
         ctx.m_device,
         frame_data_layout_set_binding,
-        descriptor_sets[1],
+        set.descriptor_sets[1],
         std::array{ render_camera.get_buffer_descriptor()[1] }
     );
-    render_camera.descriptor_sets[0] = descriptor_sets[0];
-    render_camera.descriptor_sets[1] = descriptor_sets[1];
+    render_camera.descriptor_sets[0] = set.descriptor_sets[0];
+    render_camera.descriptor_sets[1] = set.descriptor_sets[1];
 
     ds.writer.write_texture(
         ctx.m_device,
         texture_layout_set_binding,
-        descriptor_sets[2],
+        set.descriptor_sets[2],
         std::array{ rm.get_texture(DEFAULT_TEXTURE).m_descriptor_image_info }
     );
 
@@ -118,28 +112,22 @@ int main() {
         { frame_data_layout_set, texture_layout_set }
     );
 
-    // Here we compile our shader.
-    auto compiled_shaders = compile_shader_code(
+    auto shader_handles = rm.load_shader(
+        ctx,
         "assets/vulkan-shaders/shader.slang",
         { "vertMain", "fragMain" },
         { "assets/vulkan-shaders/include" }
     );
 
-    // You could also compile it externally and load after
-    // auto shader_s      = v::read_file("assets/vulkan-shaders/slang.spv");
-
-    auto shader_v        = compiled_shaders[0].code;
-    auto shader_v_module = v::create_shader_module(ctx, shader_v);
-
-    auto shader_f        = compiled_shaders[1].code;
-    auto shader_f_module = v::create_shader_module(ctx, shader_f);
+    auto vert = shader_handles[0];
+    auto frag = shader_handles[1];
 
     // Configuer pipeline stages
     v::PipelineConfig config{
         .color_format           = ctx.m_swap_chain_surface_format.format,
         .depth_format           = ctx.m_depth_format,
-        .frag_shader_module     = shader_f_module,
-        .vert_shader_module     = shader_v_module,
+        .frag_shader_module     = rm.get_shader(frag),
+        .vert_shader_module     = rm.get_shader(vert),
         .binding_descriptions   = v::getBindingDescriptions(),
         .attribute_descriptions = v::getAttributeDescriptions(),
         .cull_mode              = vk::CullModeFlagBits::eBack,
@@ -156,7 +144,10 @@ int main() {
     v::MaterialData mat0{ texture_layout_set,
                           default_bundle.pipeline_layout,
                           default_bundle.pipeline,
-                          descriptor_sets[2] };
+                          set.descriptor_sets[2],
+                          set.descriptor_pool_idx,
+                          vert,
+                          frag };
 
     auto m_handle = rm.add_material(ctx, std::move(mat0));
 
@@ -175,9 +166,9 @@ int main() {
             varicle::renderer::PrimitiveType::QUAD,
             m_handle,
             {
-                { 0, 0, 0},//  sin(value) * 200 },
+                { 0, 0, 0 }, //  sin(value) * 200 },
                 { 1, 1, 1 },
-                { 0,value , 0 },
+                { 0, value, 0 },
             },
             render_camera
         );
@@ -186,7 +177,13 @@ int main() {
         v::end_frame(ctx);
     }
 
-    v::cleanup(ctx);
+
+    ctx.m_device.waitIdle();
+    render_camera.destory(ctx.m_device, ds, set.descriptor_pool_idx);
+
+    ds.cache.reset(ctx.m_device);
+    v::destory_graphics_pipeline(ctx.m_device, default_bundle);
+    v::cleanup(ctx, ds, rm);
 
     return 0;
 }

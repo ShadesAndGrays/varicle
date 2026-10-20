@@ -1,14 +1,15 @@
 #pragma once
+#include "core/slot-map.hpp"
 #include <cstdint>
 
 namespace varicle::renderer {
-using TextureHandle  = uint32_t;
-using MeshHandle     = uint32_t;
-using MaterialHandle = uint32_t;
-using ShaderHandle   = uint32_t;
+using TextureHandle  = structures::SlotID;
+using MeshHandle     = structures::SlotID;
+using MaterialHandle = structures::SlotID;
+using ShaderHandle   = structures::SlotID;
 
-constexpr TextureHandle  INVALID_TEXTURE  = 0;
-constexpr MeshHandle     INVALID_MESH     = 0;
-constexpr MaterialHandle INVALID_MATERIAL = 0;
-constexpr ShaderHandle   INVALID_SHADER   = 0;
-} // namespace varicle::render
+constexpr TextureHandle  INVALID_TEXTURE  = structures::INVALID_SLOTID;
+constexpr MeshHandle     INVALID_MESH     = structures::INVALID_SLOTID;
+constexpr MaterialHandle INVALID_MATERIAL = structures::INVALID_SLOTID;
+constexpr ShaderHandle   INVALID_SHADER   = structures::INVALID_SLOTID;
+} // namespace varicle::renderer

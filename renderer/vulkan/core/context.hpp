@@ -49,12 +49,12 @@ struct VulkanContext {
     vk::Extent2D               m_swap_chain_extent;
     std::vector<vk::ImageView> m_swap_chain_image_views;
 
-    vk::DescriptorSetLayout        m_descriptor_set_layout = nullptr;
-    vk::PipelineLayout             m_pipeline_layout       = nullptr;
-    vk::Pipeline                   m_graphics_pipeline     = nullptr;
-    vk::ShaderModule               m_shader_module         = nullptr;
-    vk::DescriptorPool             m_descriptor_pool       = nullptr;
-    std::vector<vk::DescriptorSet> m_descriptor_sets;
+    // vk::DescriptorSetLayout        m_descriptor_set_layout = nullptr;
+    // vk::PipelineLayout             m_pipeline_layout       = nullptr;
+    // vk::Pipeline                   m_graphics_pipeline     = nullptr;
+    // vk::ShaderModule               m_shader_module         = nullptr;
+    // vk::DescriptorPool             m_descriptor_pool       = nullptr;
+    // std::vector<vk::DescriptorSet> m_descriptor_sets;
 
     vk::CommandPool                m_command_pool = nullptr;
     std::vector<vk::CommandBuffer> m_command_buffers;

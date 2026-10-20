@@ -2,6 +2,7 @@
 #pragma once
 #include "renderer/common/camera.hpp"
 #include "renderer/vulkan/core/config.hpp"
+#include "renderer/vulkan/graphics/pipeline.hpp"
 #include "renderer/vulkan/graphics/resource.hpp"
 #include <glm/ext/vector_float4.hpp>
 #include <glm/glm.hpp>
@@ -30,10 +31,11 @@ struct RenderCamera {
 
     void update(uint32_t current_frame) {
         frame_data.update_uniform_buffer(
-            {
-            .viewProj = camera.get_view_project_matrix(GraphicsBackend::Vulkan),
-              .cameraPos =
-                  glm::vec4(camera.position.x, camera.position.y, camera.position.z, 1.0f) },
+            { .viewProj =
+                  camera.get_view_project_matrix(GraphicsBackend::Vulkan),
+              .cameraPos = glm::vec4(
+                  camera.position.x, camera.position.y, camera.position.z, 1.0f
+              ) },
             current_frame
         );
     }
@@ -44,6 +46,16 @@ struct RenderCamera {
             result.push_back(frame_data.get_buffer_info(i));
         }
         return result;
+    }
+
+    // Destroy gpu resources inside camera
+    void destory(vk::Device& device, DescriptorSystem ds, uint32_t pool_idx) {
+        UniformBufferData<FrameData>::destroy_uniform_buffer(
+            device, std::move(frame_data)
+        );
+        for (auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            ds.pool_allocator.deallocate(device, descriptor_sets[i], pool_idx);
+        }
     }
 };
 

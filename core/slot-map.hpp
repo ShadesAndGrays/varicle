@@ -37,6 +37,8 @@ struct SlotID {
     bool is_valid() { return index != std::numeric_limits<uint32_t>().max(); }
 };
 
+constexpr SlotID INVALID_SLOTID = { std::numeric_limits<uint32_t>().max() };
+
 template <typename T> class SlotMap {
 
     struct Slot {
@@ -152,6 +154,12 @@ template <typename T> class SlotMap {
             return true;
         }
         return false;
+    }
+    void clear() {
+        erase.clear();
+        data.clear();
+        free_list.clear();
+        slots.clear();
     }
 
     void print() const {

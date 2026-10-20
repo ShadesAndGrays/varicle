@@ -1,6 +1,6 @@
 #pragma once
-#include "renderer/vulkan/core/config.hpp"
 #include "renderer/vulkan/core/context.hpp"
+#include "vulkan/vulkan.hpp"
 #include <unordered_map>
 #include <vulkan/vulkan.hpp>
 
@@ -73,6 +73,13 @@ void create_graphics_pipeline(
     PipelineBundle& bundle
 );
 
+void destory_graphics_pipeline(
+    vk::Device      device,
+    PipelineBundle& bundle
+);
+
+
+
 struct LayoutKeyHash {
     size_t operator()(
         const std::vector<vk::DescriptorSetLayoutBinding>& bindings
@@ -92,25 +99,38 @@ class DescriptorLayoutCache {
         vk::Device                                        device,
         const std::vector<vk::DescriptorSetLayoutBinding> bindings
     );
+
+    void reset(vk::Device device);
 };
 
 class DescriptorPoolAllocator {
+  public:
+    struct Allocation {
+        std::vector<vk::DescriptorSet> descriptor_sets;
+        uint32_t                       descriptor_pool_idx;
+    };
+
   private:
     // some default setting
     static constexpr int s_maxSets  = 256;
     static constexpr int s_samplers = 1024;
     static constexpr int s_buffers  = 256;
 
-    std::vector<vk::DescriptorPool> m_full;
-    vk::DescriptorPool              m_current = nullptr;
+    std::vector<vk::DescriptorPool> m_pool_stack;
 
   public:
     void create_new_pool(vk::Device device);
 
-    std::vector<vk::DescriptorSet> allocate(
-        vk::Device              device,
-        std::vector<vk::DescriptorSetLayout> layouts
+    Allocation
+    allocate(vk::Device device, std::vector<vk::DescriptorSetLayout> layouts);
+
+    void deallocate(
+        vk::Device        device,
+        vk::DescriptorSet set,
+        uint32_t          descriptor_pool_idx
     );
+
+    void reset(vk::Device device);
 };
 
 class DescriptorWriter {
@@ -125,11 +145,11 @@ class DescriptorWriter {
     );
 
     void write_texture(
-        vk::Device                         device,
-        vk::DescriptorSetLayoutBinding     layout_binding,
-        vk::DescriptorSet                  descriptor_set,
+        vk::Device                               device,
+        vk::DescriptorSetLayoutBinding           layout_binding,
+        vk::DescriptorSet                        descriptor_set,
         std::span<const vk::DescriptorImageInfo> image_infos,
-        std::uint32_t                      offset = 0
+        std::uint32_t                            offset = 0
     );
 };
 

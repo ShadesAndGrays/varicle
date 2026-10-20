@@ -103,6 +103,14 @@ template <typename T> struct UniformBufferData {
         }
         return g_buffer;
     }
+
+    static void
+    destroy_uniform_buffer(vk::Device device, UniformBufferData g_buffer) {
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            device.freeMemory(g_buffer.m_uniform_buffers_memory[i]);
+            device.destroyBuffer(g_buffer.m_uniform_buffers[i]);
+        }
+    }
 };
 
 struct TextureData {
@@ -129,7 +137,6 @@ struct TextureData {
 struct MeshData {
     // loaded on the cpu
 
-    MeshHandle            ID;
     std::vector<Vertex>   m_vertices;
     std::vector<uint32_t> m_indices;
 
@@ -163,12 +170,17 @@ struct MaterialData {
         vk::DescriptorSetLayout descriptor_set_layout,
         vk::PipelineLayout      pipeline_layout,
         vk::Pipeline            graphics_pipeline,
-        vk::DescriptorSet       descriptor_set
+        vk::DescriptorSet       descriptor_set,
+        uint32_t                descriptor_pool_idx,
+        ShaderHandle            vertex_shader   = INVALID_SHADER,
+        ShaderHandle            fragment_shader = INVALID_SHADER
     )
         : m_descriptor_set_layout(std::move(descriptor_set_layout)),
           m_graphics_pipeline(std::move(graphics_pipeline)),
           m_pipeline_layout(std::move(pipeline_layout)),
-          m_descriptor_set(std::move(descriptor_set)) {}
+          m_descriptor_set(std::move(descriptor_set)),
+          m_descriptor_pool_idx(descriptor_pool_idx),
+          m_vertex_shader(vertex_shader), m_fragment_shader(fragment_shader) {}
 
     MaterialData(const MaterialData&)            = delete;
     MaterialData& operator=(const MaterialData&) = delete;
@@ -180,6 +192,9 @@ struct MaterialData {
     vk::PipelineLayout      m_pipeline_layout       = nullptr;
     vk::Pipeline            m_graphics_pipeline     = nullptr;
     vk::DescriptorSet       m_descriptor_set;
+    uint32_t                m_descriptor_pool_idx;
+    ShaderHandle            m_vertex_shader   = INVALID_SHADER;
+    ShaderHandle            m_fragment_shader = INVALID_SHADER;
 };
 
 } // namespace varicle::renderer::vulkan

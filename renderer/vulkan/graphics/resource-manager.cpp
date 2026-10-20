@@ -2,9 +2,11 @@
 #include "renderer/vulkan/core/context.hpp"
 #include "renderer/vulkan/graphics/buffer.hpp"
 #include "renderer/vulkan/graphics/image.hpp"
+#include "renderer/vulkan/graphics/pipeline.hpp"
 #include "renderer/vulkan/graphics/resource.hpp"
 #include "renderer/vulkan/util/command.hpp"
 
+#include "renderer/vulkan/util/slang-compiler.hpp"
 #include "vendor/stb/stb_image.h"
 #include "vendor/tinyobjloader/tiny_obj_loader.h"
 #include <print>
@@ -94,7 +96,6 @@ TextureData ResourceManager::create_default_texture(VulkanContext& ctx) {
     ctx.m_device.freeMemory(staging_buffer_memory);
     ctx.m_device.destroyBuffer(staging_buffer);
 
-
     texture.m_image_view = create_image_view(
         ctx,
         texture.m_image,
@@ -122,8 +123,7 @@ TextureHandle ResourceManager::load_texture(
 }
 
 TextureHandle ResourceManager::add_texture(TextureData&& texture) {
-    m_textures.push_back(std::move(texture));
-    return static_cast<MeshHandle>(m_textures.size() - 1);
+    return m_textures.push(std::move(texture));
 }
 
 void ResourceManager::unload_texture(vk::Device device, TextureHandle texture) {
@@ -139,8 +139,37 @@ ResourceManager::load_mesh(vulkan::VulkanContext& ctx, const char* filepath) {
     return add_mesh(std::move(mesh));
 }
 MeshHandle ResourceManager::add_mesh(MeshData&& mesh) {
-    m_meshes.push_back(std::move(mesh));
-    return static_cast<MeshHandle>(m_meshes.size() - 1);
+    return m_meshes.push(std::move(mesh));
+}
+
+void ResourceManager::load_primitives(vulkan::VulkanContext& ctx) {
+
+    constexpr PrimitiveType all_primitives[] = {
+        PrimitiveType::TRIANGLE,
+        PrimitiveType::QUAD,
+        PrimitiveType::TWO_QUAD_CUBE,
+        PrimitiveType::FULLSCREEN_TRIANGLE,
+    };
+
+    for (uint32_t i = 0; i < static_cast<uint32_t>(PrimitiveType::LAST); i++) {
+
+        auto primitive =
+            varicle::renderer::get_primitive(static_cast<PrimitiveType>(i));
+
+        println("loaded primitive {}", i);
+        MeshData mesh = {
+            primitive.verticies,
+            primitive.indices,
+        };
+
+        MeshData::create_index_buffer(ctx, mesh);
+        MeshData::create_vertex_buffer(ctx, mesh);
+
+        m_primitives[i] = add_mesh(std::move(mesh));
+    }
+}
+MeshData& ResourceManager::get_primitive(std::uint32_t idx) {
+    return m_meshes[m_primitives[idx]];
 }
 
 MeshData& ResourceManager::get_mesh(MeshHandle mesh) {
@@ -149,7 +178,7 @@ MeshData& ResourceManager::get_mesh(MeshHandle mesh) {
 
 void ResourceManager::unload_mesh(vk::Device device, MeshHandle mesh) {
     MeshData mesh_to_unload = std::move(m_meshes[mesh]);
-    unload_mesh(device, std::move(mesh_to_unload));
+    unload_mesh_data(device, std::move(mesh_to_unload));
 }
 
 MeshData ResourceManager::load_mesh_data(const char* model_path) {
@@ -319,14 +348,17 @@ ResourceManager::load_texture_data(VulkanContext& ctx, const char* path) {
     return texture;
 }
 
-void ResourceManager::unload_texture(vk::Device device, TextureData texture) {
+void ResourceManager::unload_texture_data(
+    vk::Device  device,
+    TextureData texture
+) {
 
     device.free(texture.m_image_memory);
     device.destroyImageView(texture.m_image_view);
     device.destroyImage(texture.m_image);
 }
 
-void ResourceManager::unload_mesh(vk::Device device, MeshData mesh) {
+void ResourceManager::unload_mesh_data(vk::Device device, MeshData mesh) {
     device.free(mesh.m_index_buffer_memory);
     device.free(mesh.m_vertex_buffer_memory);
     device.destroyBuffer(mesh.m_vertex_buffer);
@@ -337,18 +369,18 @@ void ResourceManager::unload_mesh(vk::Device device, MeshData mesh) {
 
 void ResourceManager::unload_all_texures(vk::Device device) {
     static int num = 0;
-    for (auto& i : m_textures) {
+    for (auto& i : m_textures.get_data()) {
         num++;
-        unload_texture(device, std::move(i));
+        unload_texture_data(device, std::move(i));
     }
     std::println("Unloaded {} textures", num);
 }
 
 void ResourceManager::unload_all_meshes(vk::Device device) {
     static int num = 0;
-    for (auto& i : m_meshes) {
+    for (auto& i : m_meshes.get_data()) {
         num++;
-        unload_mesh(device, std::move(i));
+        unload_mesh_data(device, std::move(i));
     }
 
     std::println("Unloaded {} meshes", num);
@@ -362,21 +394,86 @@ MaterialHandle ResourceManager::add_material(
     vulkan::VulkanContext& ctx,
     MaterialData&&         material
 ) {
-    m_materials.push_back(std::move(material));
-    return static_cast<MeshHandle>(m_textures.size() - 1);
+    return m_materials.push(std::move(material));
 }
 
-
-//ResourceManager::
-// MaterialHandle create_material(VulkanContext& ctx) {
+// ResourceManager::
+//  MaterialHandle create_material(VulkanContext& ctx) {
 //
-//     }
+//      }
 
-void ResourceManager::unload_material(
-    VulkanContext& ctx,
-    MaterialHandle material
-) {}
+void ResourceManager::unload_material_data(
+    VulkanContext&    ctx,
+    DescriptorSystem& ds,
+    MaterialData      material
+) {
+    ds.pool_allocator.deallocate(
+        ctx.m_device, material.m_descriptor_set, material.m_descriptor_pool_idx
+    );
+}
 
-void ResourceManager::unload_all_materials(VulkanContext& ctx) {}
+void ResourceManager::unload_all_materials(
+    VulkanContext&    ctx,
+    DescriptorSystem& ds
+) {
+
+    static int num = 0;
+    for (auto& i : m_materials.get_data()) {
+        num++;
+        unload_material_data(ctx, ds, std::move(i));
+    }
+    ds.pool_allocator.reset(ctx.m_device);
+
+    std::println("Unloaded {} materials", num);
+}
+[[nodiscard]]
+std::vector<ShaderHandle> ResourceManager::load_shader(
+    VulkanContext&                 ctx,
+    const std::string              path,
+    const std::vector<std::string> entry_points,
+    const std::vector<std::string> include_dirs
+) {
+
+    std::vector<ShaderHandle> shader_handles;
+
+    auto compiled_shaders =
+        compile_shader_code(path, entry_points, include_dirs);
+
+    for (auto& compiled_shader : compiled_shaders) {
+        auto shader_code = compiled_shader.code;
+        shader_handles.push_back(
+            m_shaders.push(create_shader_module(ctx, shader_code))
+        );
+    }
+
+    return shader_handles;
+}
+void ResourceManager::unload_shader(vk::Device device, ShaderHandle shader) {
+    auto& shader_module = get_shader(shader);
+    unload_shader_data(device, shader_module);
+    m_shaders.remove(shader);
+}
+void ResourceManager::unload_shader_data(
+    vk::Device       device,
+    vk::ShaderModule shader_module
+) {
+    device.destroyShaderModule(shader_module);
+}
+
+void ResourceManager::unload_all_shaders(vk::Device device) {
+
+    static int num = 0;
+    for (auto& i : m_shaders.get_data()) {
+        num++;
+        unload_shader_data(device, i);
+    }
+    m_shaders.clear();
+
+    std::println("Unloaded {} shaders", num);
+};
+
+vk::ShaderModule& ResourceManager::get_shader(ShaderHandle shader) {
+    return m_shaders[shader];
+}
 
 } // namespace varicle::renderer::vulkan

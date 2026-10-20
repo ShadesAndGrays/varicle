@@ -70,9 +70,10 @@ glm::mat4 varicle::renderer::Camera::get_projection_matix(
         return glm::perspectiveRH_NO(glm::radians(fov), aspect(), near, far);
     } else {
         if (backend == GraphicsBackend::Vulkan) {
-            auto proj = glm::orthoRH_ZO(
-                -width / 2, width / 2, -height / 2, height / 2, near, far
-            );
+            auto w = aspect() * 10.0f;
+            auto h = 10.0f;
+            auto proj =
+                glm::orthoRH_ZO(-w / 2, w / 2, -h / 2, h / 2, near, far);
             proj[1][1] *= -1;
             return proj;
         }

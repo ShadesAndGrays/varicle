@@ -18,33 +18,6 @@ using std::println;
 using namespace varicle::renderer;
 using namespace varicle::renderer::vulkan;
 
-void load_primitives(VulkanContext& ctx, ResourceManager& rm) {
-
-    constexpr PrimitiveType all_primitives[] = {
-        PrimitiveType::TRIANGLE,
-        PrimitiveType::QUAD,
-        PrimitiveType::TWO_QUAD_CUBE,
-        PrimitiveType::FULLSCREEN_TRIANGLE,
-    };
-
-    for (uint32_t i = 0; i < static_cast<uint32_t>(PrimitiveType::LAST); i++) {
-
-        auto primitive =
-            varicle::renderer::get_primitive(static_cast<PrimitiveType>(i));
-
-        println("loaded primitive {}", i);
-        MeshData mesh = {
-            primitive.verticies,
-            primitive.indices,
-        };
-
-        MeshData::create_index_buffer(ctx, mesh);
-        MeshData::create_vertex_buffer(ctx, mesh);
-        mesh.ID = i;
-        rm.add_mesh(std::move(mesh));
-    }
-}
-
 varicle::renderer::vulkan::VulkanContext
 varicle::renderer::vulkan::init(Window& window) {
     auto ctx = VulkanContext(window);
@@ -62,39 +35,13 @@ varicle::renderer::vulkan::init(Window& window) {
     create_swap_chain(ctx);
     create_image_views(ctx);
     create_texture_sampler(ctx);
-    // create_descriptor_set_layout(ctx);
+
     create_command_pool(ctx);
     create_color_resources(ctx);
     create_depth_resources(ctx);
 
-    // ResourceManager m_resource_manager;
-    // DEFAULT_TEXTURE = m_resource_manager.load_texture(ctx,
-    // "assets/textures/cube.png"); create_uniform_buffer(ctx); auto& texture =
-    // m_resource_manager.get_texture(ctx, DEFAULT_TEXTURE);
-
-    // // TODO: Add Bindless texture
-
-    // create_descriptor_pool(ctx);
-    // create_descriptor_set(
-    //     ctx, m_resource_manager.get_texture(ctx, DEFAULT_TEXTURE)
-    // );
     create_command_buffers(ctx);
     create_sync_objects(ctx);
-
-    // Mesh rectangle(
-    //     { { { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
-    //       { { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
-    //       { { 0.5f, 0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-    //       { { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } } },
-    //     { 0, 1, 2, 2, 3, 0 }
-    // );
-    //
-    // create_vertex_buffer(ctx, rectangle);
-    // create_index_buffer(ctx, rectangle);
-    // RECTANGLE = m_resource_manager.add_mesh(ctx, std::move(rectangle));
-    // std::println("mesh handle {}",Rectangle);
-
-    // load_primitive(ctx);
 
     return ctx;
 }
@@ -315,7 +262,7 @@ void varicle::renderer::vulkan::draw_primitive(
     RenderCamera&    camera
 ) {
 
-    auto& mesh = rm.get_mesh(static_cast<uint32_t>(type));
+    auto& mesh = rm.get_primitive(static_cast<uint32_t>(type));
     auto  cmd  = ctx.get_current_command_buffer();
 
     cmd.bindVertexBuffers(0, mesh.m_vertex_buffer, { 0 });
@@ -354,12 +301,64 @@ void varicle::renderer::vulkan::draw_primitive(
     cmd.drawIndexed(static_cast<uint32_t>(mesh.m_indices.size()), 1, 0, 0, 0);
 }
 
-void varicle::renderer::vulkan::cleanup(VulkanContext& ctx) {}
+void varicle::renderer::vulkan::cleanup(
+    VulkanContext&    ctx,
+    DescriptorSystem& ds,
+    ResourceManager&  rm
+) {
+
+    ctx.m_device.waitIdle();
+
+    std::println("Shutting down....");
+
+    rm.unload_all_materials(ctx, ds);
+    rm.unload_all_shaders(ctx.m_device);
+    rm.unload_all_texures(ctx.m_device);
+    rm.unload_all_meshes(ctx.m_device);
+
+    // Synchronization
+    for (auto& i : ctx.m_present_complete_semaphores)
+        ctx.m_device.destroySemaphore(i);
+    for (auto& i : ctx.m_render_finished_semaphores)
+        ctx.m_device.destroySemaphore(i);
+    for (auto& i : ctx.m_in_flight_fences)
+        ctx.m_device.destroyFence(i);
+
+    // m_resource_manager.unload_all_meshes(ctx);
+    // m_resource_manager.unload_all_texures(ctx);
+    ctx.m_device.destroySampler(ctx.m_texture_sampler);
+
+    ctx.m_device.destroyImageView(ctx.m_depth_image_view);
+    ctx.m_device.freeMemory(ctx.m_depth_image_memory);
+    ctx.m_device.destroyImage(ctx.m_depth_image);
+
+    ctx.m_device.destroyImageView(ctx.m_color_image_view);
+    ctx.m_device.freeMemory(ctx.m_color_image_memory);
+    ctx.m_device.destroyImage(ctx.m_color_image);
+
+    // Command pool with command buffers
+    ctx.m_device.destroyCommandPool(ctx.m_command_pool);
+    ctx.m_device.destroyCommandPool(ctx.m_transfer_command_pool);
+
+    // Swap chain
+    for (auto& view : ctx.m_swap_chain_image_views)
+        ctx.m_device.destroyImageView(view);
+    ctx.m_device.destroySwapchainKHR(ctx.m_swap_chain);
+
+    // Device
+    ctx.m_device.destroy();
+
+    ctx.m_instance.destroySurfaceKHR(ctx.m_surface);
+#if !defined(NDEBUG)
+    ctx.m_instance.destroyDebugUtilsMessengerEXT(ctx.m_debugMessenger);
+#endif
+    ctx.m_instance.destroy();
+}
 
 ResourceManager
 varicle::renderer::vulkan::create_resource_manager(VulkanContext& ctx) {
     ResourceManager rm;
-    load_primitives(ctx, rm);
+    rm.load_primitives(ctx);
     return rm;
 }
 
