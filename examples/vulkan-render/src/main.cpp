@@ -4,6 +4,8 @@
 #include "renderer/vulkan/graphics/render-camera.hpp"
 #include "renderer/vulkan/graphics/resource.hpp"
 #include "renderer/vulkan/util/slang-compiler.hpp"
+#include <print>
+using std::println;
 
 namespace v = varicle::renderer::vulkan;
 
@@ -21,14 +23,8 @@ int main() {
         rm.add_texture(std::move(rm.create_default_texture(ctx)));
 
     // Get Camera data
-    auto render_camera = v::RenderCamera(ctx);
-    render_camera.camera =
-        std::move(varicle::renderer::Camera::default_orthographic());
-    render_camera.camera.position.x = 0;
-    render_camera.camera.position.y = 0;
-    render_camera.camera.position.z = 2;
-
-    ds.pool_allocator.create_new_pool(ctx.m_device);
+    auto render_camera = v::RenderCamera(ctx, ds);
+    rm;
 
     // Shader uniform Bindings
 
@@ -46,23 +42,6 @@ int main() {
         vk::ShaderStageFlagBits::eFragment
     };
 
-    // Even though we want to have two frame data in total, descriptor count
-    // remains 1. This is what we want are shader to actuall map against.
-    // setting this to two would map and array of size 2 for our frame data
-    auto frame_data_layout_set_binding = vk::DescriptorSetLayoutBinding{
-        0,
-        vk::DescriptorType::eUniformBuffer,
-        1,
-        vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment
-    };
-
-    auto frame_data_layout_set = ds.cache.get_or_create_layout(
-        ctx.m_device,
-        {
-            frame_data_layout_set_binding,
-        }
-    );
-
     auto texture_layout_set = ds.cache.get_or_create_layout(
         ctx.m_device,
         {
@@ -72,44 +51,24 @@ int main() {
 
     // He we reuse the layout set. To give use two identitcal frame data set
     // along with our texture layout set
-    auto set = ds.pool_allocator.allocate(
-        ctx.m_device,
-        { frame_data_layout_set, frame_data_layout_set, texture_layout_set }
-    );
+    auto set = ds.pool_allocator.allocate(ctx.m_device, { texture_layout_set });
 
     // Finally we write to our descriptor set so our shader can see the data
     // we've created
 
-    ds.writer.write_buffer(
-        ctx.m_device,
-        frame_data_layout_set_binding,
-        set.descriptor_sets[0],
-        std::array{ render_camera.get_buffer_descriptor()[0] }
-    );
-
-    ds.writer.write_buffer(
-        ctx.m_device,
-        frame_data_layout_set_binding,
-        set.descriptor_sets[1],
-        std::array{ render_camera.get_buffer_descriptor()[1] }
-    );
-    render_camera.descriptor_sets[0] = set.descriptor_sets[0];
-    render_camera.descriptor_sets[1] = set.descriptor_sets[1];
-
     ds.writer.write_texture(
         ctx.m_device,
         texture_layout_set_binding,
-        set.descriptor_sets[2],
+        set.descriptor_sets[0],
         std::array{ rm.get_texture(DEFAULT_TEXTURE).m_descriptor_image_info }
     );
 
     // Now it's time to build our shader
 
     // I've made a nice bundle container to keep everything in order
-    // The order of the layou should match the order in the shader
-
+    // The order of the layout should match the order in the shader
     v::PipelineBundle default_bundle(
-        { frame_data_layout_set, texture_layout_set }
+        { render_camera.frame_data_layout_set, texture_layout_set }
     );
 
     auto shader_handles = rm.load_shader(
@@ -144,7 +103,7 @@ int main() {
     v::MaterialData mat0{ texture_layout_set,
                           default_bundle.pipeline_layout,
                           default_bundle.pipeline,
-                          set.descriptor_sets[2],
+                          set.descriptor_sets[0],
                           set.descriptor_pool_idx,
                           vert,
                           frag };
@@ -177,12 +136,10 @@ int main() {
         v::end_frame(ctx);
     }
 
-
     ctx.m_device.waitIdle();
-    render_camera.destory(ctx.m_device, ds, set.descriptor_pool_idx);
+    render_camera.destory(ctx.m_device, ds);
 
-    ds.cache.reset(ctx.m_device);
-    v::destory_graphics_pipeline(ctx.m_device, default_bundle);
+    v::destroy_graphics_pipeline(ctx.m_device, default_bundle);
     v::cleanup(ctx, ds, rm);
 
     return 0;

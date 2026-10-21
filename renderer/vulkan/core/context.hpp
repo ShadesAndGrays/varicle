@@ -106,6 +106,7 @@ struct VulkanContext {
 
     vk::SampleCountFlagBits m_msaa_samples = vk::SampleCountFlagBits::e1;
 
+
     vk::CommandBuffer& get_current_command_buffer() {
         return m_command_buffers[m_frame_index];
     }

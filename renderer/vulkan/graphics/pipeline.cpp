@@ -171,8 +171,7 @@ void create_graphics_pipeline(
     bundle.pipeline = result.value;
 }
 
-void destory_graphics_pipeline(vk::Device device, PipelineBundle& bundle) {
-
+void destroy_graphics_pipeline(vk::Device device, PipelineBundle& bundle) {
     device.destroyPipeline(bundle.pipeline);
     device.destroyPipelineLayout(bundle.pipeline_layout);
 }

@@ -4,6 +4,7 @@
 #include "renderer/common/handles.hpp"
 #include "renderer/vulkan/core/context.hpp"
 #include "renderer/vulkan/graphics/pipeline.hpp"
+#include "renderer/vulkan/graphics/render-camera.hpp"
 #include "renderer/vulkan/graphics/resource.hpp"
 #include "vulkan/vulkan.hpp"
 #include <array>
@@ -18,8 +19,12 @@ class ResourceManager {
     structures::SlotMap<MeshData>         m_meshes;
     structures::SlotMap<MaterialData>     m_materials;
     structures::SlotMap<vk::ShaderModule> m_shaders;
+    structures::SlotMap<RenderCamera>     m_cameras;
 
   public:
+    RenderCamHandle create_render_camera(VulkanContext& ctx)
+    void destroy_render_camera(VulkanContext& ctx, RenderCamHandle camera);
+
     // Texture
     TextureData&  get_texture(TextureHandle texture);
     TextureHandle add_texture(TextureData&& texture);

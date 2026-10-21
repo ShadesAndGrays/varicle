@@ -73,7 +73,7 @@ void create_graphics_pipeline(
     PipelineBundle& bundle
 );
 
-void destory_graphics_pipeline(
+void destroy_graphics_pipeline(
     vk::Device      device,
     PipelineBundle& bundle
 );

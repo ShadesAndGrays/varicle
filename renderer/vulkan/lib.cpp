@@ -294,7 +294,8 @@ void varicle::renderer::vulkan::draw_primitive(
         vk::PipelineBindPoint::eGraphics,
         mat.m_pipeline_layout,
         0,
-        { camera.descriptor_sets[ctx.m_frame_index], mat.m_descriptor_set },
+        { camera.descriptor_pool_alloc.descriptor_sets[ctx.m_frame_index],
+          mat.m_descriptor_set },
         nullptr
     );
 
@@ -316,6 +317,9 @@ void varicle::renderer::vulkan::cleanup(
     rm.unload_all_texures(ctx.m_device);
     rm.unload_all_meshes(ctx.m_device);
 
+    ds.cache.reset(ctx.m_device);
+    ds.pool_allocator.reset(ctx.m_device);
+
     // Synchronization
     for (auto& i : ctx.m_present_complete_semaphores)
         ctx.m_device.destroySemaphore(i);
@@ -324,8 +328,6 @@ void varicle::renderer::vulkan::cleanup(
     for (auto& i : ctx.m_in_flight_fences)
         ctx.m_device.destroyFence(i);
 
-    // m_resource_manager.unload_all_meshes(ctx);
-    // m_resource_manager.unload_all_texures(ctx);
     ctx.m_device.destroySampler(ctx.m_texture_sampler);
 
     ctx.m_device.destroyImageView(ctx.m_depth_image_view);

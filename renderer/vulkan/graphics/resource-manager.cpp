@@ -422,7 +422,6 @@ void ResourceManager::unload_all_materials(
         num++;
         unload_material_data(ctx, ds, std::move(i));
     }
-    ds.pool_allocator.reset(ctx.m_device);
 
     std::println("Unloaded {} materials", num);
 }
