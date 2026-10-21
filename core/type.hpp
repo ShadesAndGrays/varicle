@@ -153,6 +153,47 @@ struct Mat2 {
     Mat2 operator*(int scalar) const {
         return { cols[0] * scalar, cols[1] * scalar };
     }
+
+    Mat2 operator+(const Mat2& o) const {
+        return { cols[0] + o[0], cols[1] + o[1] };
+    }
+    Mat2 operator-(const Mat2& o) const {
+        return { cols[0] - o[0], cols[1] - o[1] };
+    }
+
+    // Matrix * Matrix (column-major)
+    Mat2 operator*(const Mat2& o) const {
+        Mat2 r{};
+        for (int c = 0; c < 2; ++c) {
+            r[c] = cols[0] * o[c][0] + cols[1] * o[c][1];
+        }
+        return r;
+    }
+
+    // Matrix * Vector
+    Vec2 operator*(const Vec2& v) const {
+        return cols[0] * v[0] + cols[1] * v[1];
+    }
+
+    Mat2& operator+=(const Mat2& o) {
+        cols[0] = cols[0] + o[0];
+        cols[1] = cols[1] + o[1];
+        return *this;
+    }
+    Mat2& operator-=(const Mat2& o) {
+        cols[0] = cols[0] - o[0];
+        cols[1] = cols[1] - o[1];
+        return *this;
+    }
+    Mat2& operator*=(const Mat2& o) {
+        *this = (*this) * o;
+        return *this;
+    }
+    Mat2& operator*=(float scalar) {
+        cols[0] = cols[0] * scalar;
+        cols[1] = cols[1] * scalar;
+        return *this;
+    }
 };
 
 struct Mat3 {
@@ -182,6 +223,50 @@ struct Mat3 {
     }
     Mat3 operator*(int scalar) const {
         return { cols[0] * scalar, cols[1] * scalar, cols[2] * scalar };
+    }
+
+    Mat3 operator+(const Mat3& o) const {
+        return { cols[0] + o[0], cols[1] + o[1], cols[2] + o[2] };
+    }
+    Mat3 operator-(const Mat3& o) const {
+        return { cols[0] - o[0], cols[1] - o[1], cols[2] - o[2] };
+    }
+
+    // Matrix * Matrix (column-major)
+    Mat3 operator*(const Mat3& o) const {
+        Mat3 r{};
+        for (int c = 0; c < 3; ++c) {
+            r[c] = cols[0] * o[c][0] + cols[1] * o[c][1] + cols[2] * o[c][2];
+        }
+        return r;
+    }
+
+    // Matrix * Vector
+    Vec3 operator*(const Vec3& v) const {
+        return cols[0] * v[0] + cols[1] * v[1] + cols[2] * v[2];
+    }
+
+    Mat3& operator+=(const Mat3& o) {
+        cols[0] = cols[0] + o[0];
+        cols[1] = cols[1] + o[1];
+        cols[2] = cols[2] + o[2];
+        return *this;
+    }
+    Mat3& operator-=(const Mat3& o) {
+        cols[0] = cols[0] - o[0];
+        cols[1] = cols[1] - o[1];
+        cols[2] = cols[2] - o[2];
+        return *this;
+    }
+    Mat3& operator*=(const Mat3& o) {
+        *this = (*this) * o;
+        return *this;
+    }
+    Mat3& operator*=(float scalar) {
+        cols[0] = cols[0] * scalar;
+        cols[1] = cols[1] * scalar;
+        cols[2] = cols[2] * scalar;
+        return *this;
     }
 };
 
@@ -217,6 +302,54 @@ struct Mat4 {
                  cols[1] * scalar,
                  cols[2] * scalar,
                  cols[3] * scalar };
+    }
+
+    Mat4 operator+(const Mat4& o) const {
+        return { cols[0] + o[0], cols[1] + o[1], cols[2] + o[2], cols[3] + o[3] };
+    }
+    Mat4 operator-(const Mat4& o) const {
+        return { cols[0] - o[0], cols[1] - o[1], cols[2] - o[2], cols[3] - o[3] };
+    }
+
+    // Matrix * Matrix (column-major)
+    Mat4 operator*(const Mat4& o) const {
+        Mat4 r{};
+        for (int c = 0; c < 4; ++c) {
+            r[c] = cols[0] * o[c][0] + cols[1] * o[c][1] + cols[2] * o[c][2] +
+                cols[3] * o[c][3];
+        }
+        return r;
+    }
+
+    // Matrix * Vector
+    Vec4 operator*(const Vec4& v) const {
+        return cols[0] * v[0] + cols[1] * v[1] + cols[2] * v[2] + cols[3] * v[3];
+    }
+
+    Mat4& operator+=(const Mat4& o) {
+        cols[0] = cols[0] + o[0];
+        cols[1] = cols[1] + o[1];
+        cols[2] = cols[2] + o[2];
+        cols[3] = cols[3] + o[3];
+        return *this;
+    }
+    Mat4& operator-=(const Mat4& o) {
+        cols[0] = cols[0] - o[0];
+        cols[1] = cols[1] - o[1];
+        cols[2] = cols[2] - o[2];
+        cols[3] = cols[3] - o[3];
+        return *this;
+    }
+    Mat4& operator*=(const Mat4& o) {
+        *this = (*this) * o;
+        return *this;
+    }
+    Mat4& operator*=(float scalar) {
+        cols[0] = cols[0] * scalar;
+        cols[1] = cols[1] * scalar;
+        cols[2] = cols[2] * scalar;
+        cols[3] = cols[3] * scalar;
+        return *this;
     }
 };
 
