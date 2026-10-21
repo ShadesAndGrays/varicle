@@ -71,6 +71,8 @@ inline Mat4 lookAt(const Vec3& eye, const Vec3& target, const Vec3& up) {
     return matrix;
 }
 
+// add mat3 rotation
+
 // Generate a random float between min and max
 inline float random_range_f(float min, float max) {
     static std::random_device             rd;

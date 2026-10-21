@@ -3,7 +3,6 @@
 #include "core/math.hpp"
 #include "renderer/common/camera.hpp"
 // #include "renderer/common/object.hpp"
-#include "renderer/common/transform.hpp"
 #include "renderer/common/vertex.hpp"
 #include "renderer/common/window.hpp"
 
