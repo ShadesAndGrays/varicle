@@ -59,7 +59,8 @@ struct Camera {
     glm::mat4 get_projection_matix(
         GraphicsBackend backend = GraphicsBackend::OpenGL
     ) const;
-    glm::mat4 get_view_matrix() const;
+    // glm::mat4 get_view_matrix() const;
+    Mat4      get_view_matrix() const;
     glm::mat4 get_view_project_matrix(
         GraphicsBackend backend = GraphicsBackend::OpenGL
     ) const;

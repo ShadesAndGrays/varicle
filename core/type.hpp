@@ -243,4 +243,17 @@ inline Vec4 vec4_lerp(const Vec4& s, const Vec4& e, float a) {
              s.z + (e.z - s.z) * a,
              s.w + (e.w - s.w) * a };
 }
+
+struct Transform2D {
+    Vec2  position = { 0.0f, 0.0f };
+    Vec2  scale    = { 0.0f, 0.0f };
+    float rotation = 0.0f;
+};
+
+struct Transform3D {
+    Vec3 position = { 0.0f, 0.0f, 0.0f };
+    Vec3 scale    = { 1.0f, 1.0f, 1.0f };
+    Vec3 rotation = { 1.0f, 1.0f, 1.0f };
+};
+
 } // namespace varicle

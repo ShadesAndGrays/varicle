@@ -66,18 +66,6 @@ struct Color8 {
     static constexpr Color8 Green() { return { 0, 255, 0, 255 }; }
     static constexpr Color8 Blue() { return { 0, 0, 255, 255 }; }
     static constexpr Color8 Purple() { return { 200, 122, 255, 255 }; }
-
-    constexpr Color8 to8() const {
-        auto c = [](float v) {
-            v = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
-            return static_cast<uint8_t>(v * 255.0f + 0.5f);
-        };
-        return { c(r), c(g), c(b), c(a) };
-    }
-
-    static constexpr Colorf from8(Color8 c) {
-        return { c.r / 255.0f, c.g / 255.0f, c.b / 255.0f, c.a / 255.0f };
-    }
 };
 
 class ColorUtil {
@@ -91,6 +79,18 @@ class ColorUtil {
                  lerp_u8(s.g, e.g, a),
                  lerp_u8(s.b, e.b, a),
                  lerp_u8(s.a, e.a, a) };
+    }
+
+    static constexpr Colorf tof(Color8 c) {
+        return { c.r / 255.0f, c.g / 255.0f, c.b / 255.0f, c.a / 255.0f };
+    }
+
+    static constexpr Color8 to8(Colorf c) {
+        auto f = [](float v) {
+            v = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+            return static_cast<uint8_t>(v * 255.0f + 0.5f);
+        };
+        return { f(c.r), f(c.g), f(c.b), f(c.a) };
     }
 };
 

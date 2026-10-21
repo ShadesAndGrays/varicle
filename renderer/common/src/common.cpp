@@ -1,5 +1,6 @@
 
 #include "renderer/common/common.hpp"
+#include "core/math.hpp"
 #include "renderer/common/camera.hpp"
 // #include "renderer/common/object.hpp"
 #include "renderer/common/transform.hpp"
@@ -83,12 +84,8 @@ glm::mat4 varicle::renderer::Camera::get_projection_matix(
     }
 }
 
-glm::mat4 varicle::renderer::Camera::get_view_matrix() const {
-    return glm::lookAt(
-        glm::vec3(position.x, position.y, position.z),
-        glm::vec3(target.x, target.y, target.z),
-        glm::vec3(up.x, up.y, up.z)
-    );
+varicle::Mat4 varicle::renderer::Camera::get_view_matrix() const {
+    return lookAt(position, target, up);
 }
 
 glm::mat4 varicle::renderer::Camera::get_view_project_matrix(

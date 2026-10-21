@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.29) # module support in version 3.28
 
 set (TARGET "VaricleVulkan")
 
-project (${TARGET})
-
 add_library(${TARGET})
 add_library(Varicle::Vulkan ALIAS ${TARGET})
 
