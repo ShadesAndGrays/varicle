@@ -39,6 +39,8 @@ def save_cache(args):
             "run" : getattr(args,"run",None),
             "web" : getattr(args,"web",False),
             "port" : getattr(args,"port","8080"),
+            "examples" : getattr(args,"examples",False),
+            "tests" : getattr(args,"tests",False),
             }
     cache = ROOT_DIR / CACHE_FILE
 
@@ -113,6 +115,12 @@ def build_cmake(args):
     if args.noweb:
         args.web = False
 
+    if args.noexamples:
+        args.examples = False
+
+    if args.notests:
+        args.tests = False
+
 
     if args.debug:
         config_command.append("-DCMAKE_BUILD_TYPE=Debug")
@@ -148,6 +156,9 @@ def build_cmake(args):
     if args.examples:
         config_command.append("-DBUILD_EXAMPLES=1")
 
+    if args.tests:
+        config_command.append("-DBUILD_TESTS=1")
+
     save_cache(args)
 
     run_cmd(config_command)
@@ -181,13 +192,16 @@ def main():
     _ = build_parser.add_argument("--parallel",action="store_true",help="Build in parallel",default=cache_values.get("parallel",False))
     _ = build_parser.add_argument("--run",help="run the result",default=cache_values.get("run",None))
     _ = build_parser.add_argument("--port",help="set port to launch web server",default=cache_values.get("port","8080"))
-    _ = build_parser.add_argument("--examples",action="store_true",help="build with examples",default=False)
+    _ = build_parser.add_argument("--examples",action="store_true",help="build with examples",default=cache_values.get("examples",False))
+    _ = build_parser.add_argument("--tests",action="store_true",help="build with tests",default=cache_values.get("tests",False))
 
     _ = build_parser.add_argument("--nodebug",action="store_true",help="default back to release",default=False)
     _ = build_parser.add_argument("--noweb",action="store_true",help="stop using emscripten",default=False)
     _ = build_parser.add_argument("--noparallel",action="store_true",help="don't parallel",default=False)
     _ = build_parser.add_argument("--noskip",action="store_true",help="don't skip config",default=False)
     _ = build_parser.add_argument("--norun",action="store_true",help="don't run result",default=False)
+    _ = build_parser.add_argument("--noexamples",action="store_true",help="don't build examples",default=False)
+    _ = build_parser.add_argument("--notests",action="store_true",help="don't build tests",default=False)
 
     build_parser.set_defaults(func=build_cmake)
 
