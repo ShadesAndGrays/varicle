@@ -10,7 +10,7 @@ inline float dot(const Vec2& a, const Vec2& b) {
     return (a.x * b.x) + (a.y * b.y);
 }
 inline float dot(const Vec3& a, const Vec3& b) {
-    return (a.x * b.x) + (a.y * b.y) + (a.z * a.z);
+    return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);
 }
 
 inline Vec3 normalize(const Vec3& v) {
@@ -40,7 +40,7 @@ inline Vec3 cross(const Vec3& a, const Vec3& b) {
 inline Mat4 lookAt(const Vec3& eye, const Vec3& target, const Vec3& up) {
     Vec3 zaxis = normalize(eye - target);
     Vec3 xaxis = normalize(cross(up, zaxis));
-    Vec3 yaxis = cross(zaxis, yaxis);
+    Vec3 yaxis = cross(zaxis, xaxis);
 
     Mat4 matrix;
 
