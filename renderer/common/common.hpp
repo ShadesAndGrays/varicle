@@ -4,7 +4,6 @@
 #include "renderer/common/camera.hpp"
 #include "renderer/common/context.hpp"
 #include "renderer/common/handles.hpp"
-#include "renderer/common/object.hpp"
 #include "renderer/common/vertex.hpp"
 #include "renderer/common/window.hpp"
 // IWYU pragma: end_exports

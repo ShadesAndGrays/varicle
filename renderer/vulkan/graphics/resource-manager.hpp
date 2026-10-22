@@ -22,7 +22,7 @@ class ResourceManager {
     structures::SlotMap<RenderCamera>     m_cameras;
 
   public:
-    RenderCamHandle create_render_camera(VulkanContext& ctx)
+    RenderCamHandle create_render_camera(VulkanContext& ctx);
     void destroy_render_camera(VulkanContext& ctx, RenderCamHandle camera);
 
     // Texture

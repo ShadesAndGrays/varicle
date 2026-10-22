@@ -1,8 +1,8 @@
 #pragma once
 
 // IWYU pragma: begin_exports
-#include "renderer/common/color.hpp"
-#include "renderer/common/transform.hpp"
+#include "core/color.hpp"
+#include "core/type.hpp"
 #include "renderer/common/vertex.hpp"
 #include "renderer/common/window.hpp"
 #include "renderer/vulkan/core/context.hpp"
@@ -15,7 +15,7 @@
 namespace varicle::renderer::vulkan {
 
 VulkanContext init(Window& window);
-void          set_clear_color(VulkanContext& ctx, Color background);
+void          set_clear_color(VulkanContext& ctx, varicle::Colorf background);
 bool          should_close(VulkanContext& ctx);
 void          begin_frame(VulkanContext& ctx);
 void          end_frame(VulkanContext& ctx);
@@ -24,7 +24,7 @@ void          draw_primitive(
     ResourceManager& rm,
     PrimitiveType    type,
     MaterialHandle   material,
-    const Transform& transform,
+    const Transform3D& transform,
     RenderCamera&    camera
 );
 

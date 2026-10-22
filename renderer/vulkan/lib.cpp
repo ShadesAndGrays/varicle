@@ -1,5 +1,5 @@
 #include "renderer/vulkan/lib.hpp"
-#include "renderer/common/transform.hpp"
+#include "core/math.hpp"
 #include "renderer/vulkan/core/config.hpp"
 #include "renderer/vulkan/core/context.hpp"
 #include "renderer/vulkan/core/device.hpp"
@@ -258,7 +258,7 @@ void varicle::renderer::vulkan::draw_primitive(
     ResourceManager& rm,
     PrimitiveType    type,
     MaterialHandle   material,
-    const Transform& transform,
+    const Transform3D& transform,
     RenderCamera&    camera
 ) {
 
@@ -276,7 +276,7 @@ void varicle::renderer::vulkan::draw_primitive(
     auto& mat = rm.get_material(material);
 
     cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, mat.m_graphics_pipeline);
-    const auto mvp = transform.get_model_matrix();
+    const auto mvp = varicle::get_model_matrix(transform);
 
     // Set camera asepect and update frame data
     std::tie(camera.camera.width, camera.camera.height) = ctx.m_window.size();

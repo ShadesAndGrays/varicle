@@ -305,10 +305,14 @@ struct Mat4 {
     }
 
     Mat4 operator+(const Mat4& o) const {
-        return { cols[0] + o[0], cols[1] + o[1], cols[2] + o[2], cols[3] + o[3] };
+        return {
+            cols[0] + o[0], cols[1] + o[1], cols[2] + o[2], cols[3] + o[3]
+        };
     }
     Mat4 operator-(const Mat4& o) const {
-        return { cols[0] - o[0], cols[1] - o[1], cols[2] - o[2], cols[3] - o[3] };
+        return {
+            cols[0] - o[0], cols[1] - o[1], cols[2] - o[2], cols[3] - o[3]
+        };
     }
 
     // Matrix * Matrix (column-major)
@@ -323,7 +327,14 @@ struct Mat4 {
 
     // Matrix * Vector
     Vec4 operator*(const Vec4& v) const {
-        return cols[0] * v[0] + cols[1] * v[1] + cols[2] * v[2] + cols[3] * v[3];
+        return cols[0] * v[0] + cols[1] * v[1] + cols[2] * v[2] +
+            cols[3] * v[3];
+    }
+
+    // Matrix * Point (assumes w = 1)
+    Vec3 operator*(const Vec3& v) const {
+        Vec4 r = (*this) * Vec4{ v.x, v.y, v.z, 1.0f };
+        return { r.x, r.y, r.z };
     }
 
     Mat4& operator+=(const Mat4& o) {
@@ -386,7 +397,7 @@ struct Transform2D {
 struct Transform3D {
     Vec3 position = { 0.0f, 0.0f, 0.0f };
     Vec3 scale    = { 1.0f, 1.0f, 1.0f };
-    Vec3 rotation = { 1.0f, 1.0f, 1.0f };
+    Vec3 rotation = { 0.0f, 0.0f, 0.0f };
 };
 
 } // namespace varicle

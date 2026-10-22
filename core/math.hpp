@@ -118,6 +118,34 @@ inline Mat3 rotate_z(Mat3 mat, float angle) {
     return mat * rotate_z(angle);
 }
 
+inline Mat4 translate(const Vec3& v) {
+    Mat4 r = Mat4::identity();
+    r[3]   = Vec4{ v.x, v.y, v.z, 1.0f };
+    return r;
+}
+
+inline Mat4 scale(const Vec3& v) {
+    Mat4 r = Mat4::identity();
+    r[0][0] = v.x;
+    r[1][1] = v.y;
+    r[2][2] = v.z;
+    return r;
+}
+
+inline Mat4 get_model_matrix(const Transform3D& t) {
+    Mat3 rotation = rotate_x(t.rotation.x) * rotate_y(t.rotation.y) *
+        rotate_z(t.rotation.z);
+
+    Mat4 r = Mat4::identity();
+    for (int c = 0; c < 3; ++c) {
+        for (int row = 0; row < 3; ++row) {
+            r[c][row] = rotation[c][row];
+        }
+    }
+
+    return translate(t.position) * r * scale(t.scale);
+}
+
 // Generate a random float between min and max
 inline float random_range_f(float min, float max) {
     static std::random_device             rd;

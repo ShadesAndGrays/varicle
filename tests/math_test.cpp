@@ -150,6 +150,31 @@ TEST_CASE("3D rotation matrix overloads") {
     check_mat3(rotate_z(Mat3::identity(), PI / 2.0f), rotate_z(PI / 2.0f));
 }
 
+TEST_CASE("Translation, scale and model matrix") {
+    using namespace varicle;
+
+    check_vec3(translate(Vec3{ 1.0f, 2.0f, 3.0f }) * Vec3{ 0.0f, 0.0f, 0.0f },
+               1.0f, 2.0f, 3.0f);
+    check_vec3(scale(Vec3{ 2.0f, 3.0f, 4.0f }) * Vec3{ 1.0f, 1.0f, 1.0f },
+               2.0f, 3.0f, 4.0f);
+
+    Transform3D identity;
+    check_mat4(get_model_matrix(identity), Mat4::identity());
+
+    Transform3D transform;
+    transform.position = { 1.0f, 2.0f, 3.0f };
+    transform.scale    = { 2.0f, 3.0f, 4.0f };
+    transform.rotation = { 0.0f, 0.0f, 0.0f };
+    check_vec3(get_model_matrix(transform) * Vec3{ 1.0f, 1.0f, 1.0f },
+               3.0f, 5.0f, 7.0f);
+
+    Transform3D rotated;
+    rotated.scale    = { 1.0f, 1.0f, 1.0f };
+    rotated.rotation = { 0.0f, 0.0f, PI / 2.0f };
+    check_vec3(get_model_matrix(rotated) * Vec3{ 1.0f, 0.0f, 0.0f },
+               0.0f, 1.0f, 0.0f);
+}
+
 TEST_CASE("Vector math helpers") {
     using namespace varicle;
 
