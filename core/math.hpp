@@ -71,7 +71,52 @@ inline Mat4 lookAt(const Vec3& eye, const Vec3& target, const Vec3& up) {
     return matrix;
 }
 
-// add mat3 rotation
+// Rotation matrices (angle in radians, column-major)
+
+// 2D rotation matrix
+inline Mat2 rotate(float angle) {
+    float c = std::cos(angle);
+    float s = std::sin(angle);
+    return { Vec2{ c, s }, Vec2{ -s, c } };
+}
+
+inline Mat2 rotate(Mat2 mat, float angle) {
+    return mat * rotate(angle);
+}
+
+inline Mat3 rotate_x(float angle) {
+    float c = std::cos(angle);
+    float s = std::sin(angle);
+    return { Vec3{ 1.0f, 0.0f, 0.0f },
+             Vec3{ 0.0f, c, s },
+             Vec3{ 0.0f, -s, c } };
+}
+
+inline Mat3 rotate_y(float angle) {
+    float c = std::cos(angle);
+    float s = std::sin(angle);
+    return { Vec3{ c, 0.0f, -s },
+             Vec3{ 0.0f, 1.0f, 0.0f },
+             Vec3{ s, 0.0f, c } };
+}
+
+inline Mat3 rotate_z(float angle) {
+    float c = std::cos(angle);
+    float s = std::sin(angle);
+    return { Vec3{ c, s, 0.0f },
+             Vec3{ -s, c, 0.0f },
+             Vec3{ 0.0f, 0.0f, 1.0f } };
+}
+
+inline Mat3 rotate_x(Mat3 mat, float angle) {
+    return mat * rotate_x(angle);
+}
+inline Mat3 rotate_y(Mat3 mat, float angle) {
+    return mat * rotate_y(angle);
+}
+inline Mat3 rotate_z(Mat3 mat, float angle) {
+    return mat * rotate_z(angle);
+}
 
 // Generate a random float between min and max
 inline float random_range_f(float min, float max) {
