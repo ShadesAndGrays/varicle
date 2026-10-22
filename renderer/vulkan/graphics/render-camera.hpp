@@ -5,9 +5,9 @@
 #include "renderer/vulkan/core/config.hpp"
 #include "renderer/vulkan/graphics/pipeline.hpp"
 #include "renderer/vulkan/graphics/resource.hpp"
-#include <glm/ext/vector_float4.hpp>
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
+// #include <glm/ext/vector_float4.hpp>
+// #include <glm/glm.hpp>
+// #include <glm/gtc/type_ptr.hpp>
 
 namespace varicle::renderer::vulkan {
 
@@ -22,8 +22,8 @@ const auto frame_data_layout_set_binding =
                                         vk::ShaderStageFlagBits::eFragment };
 
 struct alignas(16) FrameData {
-    glm::mat4 viewProj  = glm::mat4(1);
-    glm::vec4 cameraPos = glm::vec4(1);
+    varicle::Mat4 viewProj  = varicle::Mat4::identity();
+    varicle::Vec4 cameraPos = varicle::Vec4::from(1);
 };
 
 struct RenderCamera {
@@ -34,10 +34,10 @@ struct RenderCamera {
     DescriptorPoolAllocator::Allocation descriptor_pool_alloc;
 
     RenderCamera(
-        VulkanContext&   ctx,
+        VulkanContext&    ctx,
         DescriptorSystem& ds,
-        Vec3             initial_position = { 0, 0, 2 },
-        Camera c = varicle::renderer::Camera::default_orthographic()
+        Vec3              initial_position = { 0, 0, 2 },
+        Camera            c = varicle::renderer::Camera::default_perspective()
     )
         : camera(std::move(c)) {
 
@@ -79,9 +79,10 @@ struct RenderCamera {
         frame_data.update_uniform_buffer(
             { .viewProj =
                   camera.get_view_project_matrix(GraphicsBackend::Vulkan),
-              .cameraPos = glm::vec4(
-                  camera.position.x, camera.position.y, camera.position.z, 1.0f
-              ) },
+              .cameraPos = varicle::Vec4{ camera.position.x,
+                                          camera.position.y,
+                                          camera.position.z,
+                                          1.0f } },
             current_frame
         );
     }

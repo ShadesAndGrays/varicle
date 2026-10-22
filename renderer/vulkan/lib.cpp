@@ -48,7 +48,7 @@ varicle::renderer::vulkan::init(Window& window) {
 
 void varicle::renderer::vulkan::set_clear_color(
     VulkanContext& ctx,
-    Color          background
+    Colorf         background
 ) {
     ctx.m_clear_color = vk::ClearColorValue(
         background.r, background.g, background.b, background.a
@@ -254,12 +254,12 @@ void varicle::renderer::vulkan::end_frame(VulkanContext& ctx) {
 }
 
 void varicle::renderer::vulkan::draw_primitive(
-    VulkanContext&   ctx,
-    ResourceManager& rm,
-    PrimitiveType    type,
-    MaterialHandle   material,
+    VulkanContext&     ctx,
+    ResourceManager&   rm,
+    PrimitiveType      type,
+    MaterialHandle     material,
     const Transform3D& transform,
-    RenderCamera&    camera
+    RenderCamera&      camera
 ) {
 
     auto& mesh = rm.get_primitive(static_cast<uint32_t>(type));

@@ -7,9 +7,9 @@
 #include "renderer/common/window.hpp"
 
 #include <cstring>
-#include <glm/ext/matrix_clip_space.hpp>
-#include <glm/ext/matrix_transform.hpp>
-#include <glm/ext/quaternion_transform.hpp>
+// #include <glm/ext/matrix_clip_space.hpp>
+// #include <glm/ext/matrix_transform.hpp>
+// #include <glm/ext/quaternion_transform.hpp>
 
 varicle::renderer::Window::Window(
     int             width,
@@ -57,27 +57,30 @@ float varicle::renderer::Window::get_aspect() {
     return static_cast<float>(w) / static_cast<float>(h);
 }
 
-glm::mat4 varicle::renderer::Camera::get_projection_matix(
+varicle::Mat4 varicle::renderer::Camera::get_projection_matix(
     varicle::renderer::GraphicsBackend backend
 ) const {
     if (type == CameraType::PERSPECTIVE) {
         if (backend == GraphicsBackend::Vulkan) {
             auto proj =
-                glm::perspectiveRH_ZO(glm::radians(fov), aspect(), near, far);
+                varicle::perspective_zero_to_one(fov, aspect(), near, far);
             proj[1][1] *= -1;
             return proj;
         }
-        return glm::perspectiveRH_NO(glm::radians(fov), aspect(), near, far);
+        return varicle::perspective_negative_one_to_one(
+            fov, aspect(), near, far
+        );
     } else {
         if (backend == GraphicsBackend::Vulkan) {
-            auto w = aspect() * 10.0f;
-            auto h = 10.0f;
-            auto proj =
-                glm::orthoRH_ZO(-w / 2, w / 2, -h / 2, h / 2, near, far);
+            auto w    = aspect() * 10.0f;
+            auto h    = 10.0f;
+            auto proj = varicle::ortho_zero_to_one(
+                -w / 2, w / 2, -h / 2, h / 2, near, far
+            );
             proj[1][1] *= -1;
             return proj;
         }
-        return glm::orthoRH_NO(
+        return varicle::ortho_negative_one_to_one(
             -width / 2, width / 2, -height / 2, height / 2, near, far
         );
     }
@@ -87,9 +90,10 @@ varicle::Mat4 varicle::renderer::Camera::get_view_matrix() const {
     return lookAt(position, target, up);
 }
 
-glm::mat4 varicle::renderer::Camera::get_view_project_matrix(
+varicle::Mat4 varicle::renderer::Camera::get_view_project_matrix(
     varicle::renderer::GraphicsBackend backend
 ) const {
+    // return Mat4::identity();
     return get_projection_matix(backend) * get_view_matrix();
 }
 varicle::renderer::Mesh
@@ -161,4 +165,3 @@ varicle::renderer::get_primitive(varicle::renderer::PrimitiveType type) {
         return {};
     }
 }
-

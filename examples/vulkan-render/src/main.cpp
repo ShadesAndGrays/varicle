@@ -24,7 +24,6 @@ int main() {
 
     // Get Camera data
     auto render_camera = v::RenderCamera(ctx, ds);
-    rm;
 
     // Shader uniform Bindings
 
@@ -89,7 +88,7 @@ int main() {
         .vert_shader_module     = rm.get_shader(vert),
         .binding_descriptions   = v::getBindingDescriptions(),
         .attribute_descriptions = v::getAttributeDescriptions(),
-        .cull_mode              = vk::CullModeFlagBits::eBack,
+        .cull_mode              = vk::CullModeFlagBits::eNone,
         .front_face             = vk::FrontFace::eClockwise,
         .msaa_samples           = ctx.m_msaa_samples,
         .push_constant_range    = sizeof(glm::mat4),

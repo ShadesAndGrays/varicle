@@ -1,8 +1,8 @@
 #pragma once
 
 #include "core/type.hpp"
+#include "core/constants.hpp"
 #include "renderer/common/window.hpp"
-#include <glm/glm.hpp>
 
 namespace varicle::renderer {
 
@@ -22,7 +22,7 @@ struct Camera {
     float near;
     float far;
 
-    // Projection: Perspective
+    // Field of view angle in radians
     float fov;
 
     // Projection: View
@@ -50,18 +50,17 @@ struct Camera {
                  720.f,
                  0.1f,
                  100.0f,
-                 45.f,
+                 45.f * varicle::constants::deg_to_rad,
                  { 10, 10, 10 },
                  { 0, 0, 0 },
                  { 0, 1, 0 } };
     }
 
-    glm::mat4 get_projection_matix(
+    Mat4 get_projection_matix(
         GraphicsBackend backend = GraphicsBackend::OpenGL
     ) const;
-    // glm::mat4 get_view_matrix() const;
-    Mat4      get_view_matrix() const;
-    glm::mat4 get_view_project_matrix(
+    Mat4 get_view_matrix() const;
+    Mat4 get_view_project_matrix(
         GraphicsBackend backend = GraphicsBackend::OpenGL
     ) const;
 };

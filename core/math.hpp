@@ -42,7 +42,7 @@ inline Mat4 lookAt(const Vec3& eye, const Vec3& target, const Vec3& up) {
     Vec3 xaxis = normalize(cross(up, zaxis));
     Vec3 yaxis = cross(zaxis, xaxis);
 
-    Mat4 matrix;
+    Mat4 matrix{};
 
     // Column 0
     matrix.m[0] = xaxis.x;
@@ -125,7 +125,7 @@ inline Mat4 translate(const Vec3& v) {
 }
 
 inline Mat4 scale(const Vec3& v) {
-    Mat4 r = Mat4::identity();
+    Mat4 r  = Mat4::identity();
     r[0][0] = v.x;
     r[1][1] = v.y;
     r[2][2] = v.z;
@@ -144,6 +144,86 @@ inline Mat4 get_model_matrix(const Transform3D& t) {
     }
 
     return translate(t.position) * r * scale(t.scale);
+}
+
+// --- ZERO-TO-ONE DEPTH RANGE ([0, 1]) & Y-DOWN NDC ---
+inline Mat4 perspective_zero_to_one(
+    float fov_radians,
+    float aspect,
+    float near_plane,
+    float far_plane
+) {
+    float tan_half_fov = std::tan(fov_radians / 2.0f);
+    Mat4  matrix{};
+
+    matrix.m[0]  = 1.0f / (aspect * tan_half_fov);
+    matrix.m[5]  = -1.0f / tan_half_fov; // Inverted Y for Y-down NDC
+    matrix.m[10] = far_plane / (near_plane - far_plane);
+    matrix.m[11] = -1.0f;
+    matrix.m[14] = (far_plane * near_plane) / (near_plane - far_plane);
+
+    return matrix;
+}
+
+inline Mat4 ortho_zero_to_one(
+    float left,
+    float right,
+    float bottom,
+    float top,
+    float near_plane,
+    float far_plane
+) {
+    Mat4 matrix{};
+
+    matrix.m[0]  = 2.0f / (right - left);
+    matrix.m[5]  = -2.0f / (top - bottom); // Inverted Y for Y-down NDC
+    matrix.m[10] = 1.0f / (near_plane - far_plane);
+    matrix.m[12] = -(right + left) / (right - left);
+    matrix.m[13] = -(top + bottom) / (top - bottom);
+    matrix.m[14] = near_plane / (near_plane - far_plane);
+    matrix.m[15] = 1.0f;
+
+    return matrix;
+}
+
+// --- NEGATIVE-ONE-TO-ONE DEPTH RANGE ([-1, 1]) & Y-UP NDC ---
+inline Mat4 perspective_negative_one_to_one(
+    float fov_radians,
+    float aspect,
+    float near_plane,
+    float far_plane
+) {
+    float tan_half_fov = std::tan(fov_radians / 2.0f);
+    Mat4  matrix{};
+
+    matrix.m[0]  = 1.0f / (aspect * tan_half_fov);
+    matrix.m[5]  = 1.0f / tan_half_fov; // Standard Y-up NDC
+    matrix.m[10] = -(far_plane + near_plane) / (far_plane - near_plane);
+    matrix.m[11] = -1.0f;
+    matrix.m[14] = -(2.0f * far_plane * near_plane) / (far_plane - near_plane);
+
+    return matrix;
+}
+
+inline Mat4 ortho_negative_one_to_one(
+    float left,
+    float right,
+    float bottom,
+    float top,
+    float near_plane,
+    float far_plane
+) {
+    Mat4 matrix{};
+
+    matrix.m[0]  = 2.0f / (right - left);
+    matrix.m[5]  = 2.0f / (top - bottom); // Standard Y-up NDC
+    matrix.m[10] = -2.0f / (far_plane - near_plane);
+    matrix.m[12] = -(right + left) / (right - left);
+    matrix.m[13] = -(top + bottom) / (top - bottom);
+    matrix.m[14] = -(far_plane + near_plane) / (far_plane - near_plane);
+    matrix.m[15] = 1.0f;
+
+    return matrix;
 }
 
 // Generate a random float between min and max

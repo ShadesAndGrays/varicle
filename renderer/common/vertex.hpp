@@ -3,8 +3,6 @@
 #include "core/type.hpp"
 #include <cstddef>
 #include <functional>
-#include <glm/glm.hpp>
-#include <glm/gtx/hash.hpp>
 #include <vector>
 
 namespace varicle::renderer {
